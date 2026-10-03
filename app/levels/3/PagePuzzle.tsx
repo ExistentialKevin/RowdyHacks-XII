@@ -130,7 +130,7 @@ export default function PagePuzzle() {
 
   // Append log helper
   const appendLog = useCallback((msg: string) => {
-    setLogs((prev) => [...prev, msg]);
+    setLogs(() => [msg]);
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
