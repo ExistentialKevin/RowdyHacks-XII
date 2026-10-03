@@ -78,6 +78,7 @@ export default function SecurityMazeGame() {
   const [moves, setMoves] = useState(0);
   const [won, setWon] = useState(false);
   const [caught, setCaught] = useState(false);
+  const [failedIncomplete, setFailedIncomplete] = useState(false);
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [pyodideStatus, setPyodideStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -172,28 +173,44 @@ export default function SecurityMazeGame() {
     return false;
   }, []);
 
-  // Reset game state
-  /*const resetGame = useCallback(() => {
+  // Helper reset function
+  const resetMazeState = useCallback(() => {
     setPlayer(START);
     setItems(JSON.parse(JSON.stringify(INITIAL_ITEMS)));
     setCameras(INITIAL_CAMERAS);
     setMoves(0);
     setWon(false);
     setCaught(false);
-    setRunning(false);
+    setFailedIncomplete(false);
     moveQueueRef.current = [];
-    appendLog("Game reset to starting position.");
-  }, [appendLog]); */
+  }, []);
 
   // Execute a single step movement from the queue
   const processNextMove = useCallback(() => {
     if (moveQueueRef.current.length === 0) {
       setRunning(false);
       appendLog("--- Execution Completed ---");
+
+      // Check if finished executing but not on exit grid or didn't win
+      setPlayer(currentPlayer => {
+        setItems(currentItems => {
+          const allCollected = currentItems.every(i => i.collected);
+          const atExit = grid[currentPlayer.y]?.[currentPlayer.x] === 2;
+          if (!atExit || !allCollected) {
+            setFailedIncomplete(true);
+            appendLog("Finished code execution, but you did not reach the exit with all items!");
+          }
+          return currentItems;
+        });
+        return currentPlayer;
+      });
       return;
     }
 
     const directionStr = moveQueueRef.current.shift()!;
+
+    // Increment move counter cleanly by exactly 1 outside the updater
+    setMoves(m => m + 1);
 
     setPlayer(prevPlayer => {
       if (won || caught) return prevPlayer;
@@ -215,9 +232,6 @@ export default function SecurityMazeGame() {
       }
 
       const nextPos = { x: nextX, y: nextY };
-
-      // Increment moves cleanly by exactly 1
-      setMoves(n =>n + 1);
 
       // Check item collection
       setItems(prevItems =>
@@ -267,8 +281,17 @@ export default function SecurityMazeGame() {
   // Run Python Code
   const runPythonCode = async () => {
     if (!pyodideRef.current || running) return;
+
+    // If player is not currently on the exit grid, auto-reset the maze
+    const currentCell = grid[player.y]?.[player.x];
+    if (currentCell !== 2 || !won) {
+      resetMazeState();
+      appendLog("Maze automatically reset for new run.");
+    }
+
     setRunning(true);
     moveQueueRef.current = [];
+    setFailedIncomplete(false);
     appendLog("--- Executing Python Code ---");
 
     try {
@@ -322,17 +345,10 @@ export default function SecurityMazeGame() {
           </span>
             <button
                 onClick={runPythonCode}
-                disabled={pyodideStatus !== "ready" || running || won || caught}
+                disabled={pyodideStatus !== "ready" || running || won}
                 className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:bg-emerald-500 disabled:opacity-50"
             >
               {running ? "Running..." : "Run Code"}
-            </button>
-            <button
-                onClick={resetGame}
-                disabled={running}
-                className="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 border border-zinc-700 disabled:opacity-50"
-            >
-              Reset
             </button>
           </div>
         </header>
@@ -455,10 +471,14 @@ export default function SecurityMazeGame() {
             {caught && (
                 <div className="w-full max-w-lg rounded-xl bg-red-950/80 border border-red-600 p-4 text-center text-red-200 shadow-xl">
                   <h3 className="text-lg font-bold">🚨 CAUGHT BY SECURITY CAMERA! 🚨</h3>
-                  <p className="text-sm mt-1">Avoid camera vision cones or time your movements carefully.</p>
-                  <button onClick={resetGame} className="mt-3 rounded-full bg-red-600 px-6 py-1.5 text-sm font-semibold text-white hover:bg-red-500">
-                    Try Again
-                  </button>
+                  <p className="text-sm mt-1">Avoid camera vision cones or time your movements carefully. Modify your code and click Run Code to try again!</p>
+                </div>
+            )}
+
+            {failedIncomplete && !won && !caught && (
+                <div className="w-full max-w-lg rounded-xl bg-amber-950/80 border border-amber-600 p-4 text-center text-amber-200 shadow-xl">
+                  <h3 className="text-lg font-bold">⚠️️ MAZE INCOMPLETE ⚠️</h3>
+                  <p className="text-sm mt-1">You ran out of movements before reaching the exit tile with all 3 items! Modify your code and try again.</p>
                 </div>
             )}
 
@@ -466,9 +486,6 @@ export default function SecurityMazeGame() {
                 <div className="w-full max-w-lg rounded-xl bg-emerald-950/80 border border-emerald-500 p-4 text-center text-emerald-200 shadow-xl">
                   <h3 className="text-lg font-bold">🎉 MISSION ACCOMPLISHED! 🎉</h3>
                   <p className="text-sm mt-1">Successfully collected all items and escaped in {moves} moves!</p>
-                  <button onClick={resetGame} className="mt-3 rounded-full bg-emerald-600 px-6 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500">
-                    Play Again
-                  </button>
                 </div>
             )}
           </div>
