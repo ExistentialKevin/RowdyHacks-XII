@@ -1,4 +1,4 @@
-"user client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { CodeEditor } from "./components/CodeEditor";
