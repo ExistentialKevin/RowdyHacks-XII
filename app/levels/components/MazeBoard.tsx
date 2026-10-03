@@ -1,4 +1,5 @@
-import { MAZE, type Pos } from "../lib/security";
+import type { ReactNode } from "react";
+import { grid, type Pos } from "../lib/security";
 import { CELL_SIZE } from "../lib/constants";
 
 // Adjust cell colors here to restyle the board.
@@ -8,16 +9,29 @@ function cellClassName(cell: number) {
   return "bg-zinc-100 dark:bg-zinc-900";
 }
 
-export function MazeBoard({ player }: { player: Pos }) {
+export interface MazeMarker {
+  x: number;
+  y: number;
+  content: ReactNode;
+  className?: string;
+}
+
+export function MazeBoard({
+  player,
+  markers = [],
+}: {
+  player: Pos;
+  markers?: MazeMarker[];
+}) {
   return (
     <div
       className="relative border border-black/[.08] bg-zinc-100 dark:border-white/[.145] dark:bg-zinc-900"
       style={{
-        width: MAZE[0].length * CELL_SIZE,
-        height: MAZE.length * CELL_SIZE,
+        width: grid[0].length * CELL_SIZE,
+        height: grid.length * CELL_SIZE,
       }}
     >
-      {MAZE.map((row, y) =>
+      {grid.map((row, y) =>
         row.map((cell, x) => (
           <div
             key={`${x}-${y}`}
@@ -35,6 +49,23 @@ export function MazeBoard({ player }: { player: Pos }) {
           />
         )),
       )}
+
+      {markers.map((marker, i) => (
+        <div
+          key={`marker-${i}`}
+          className={`flex items-center justify-center text-sm ${marker.className ?? ""}`}
+          style={{
+            position: "absolute",
+            left: marker.x * CELL_SIZE,
+            top: marker.y * CELL_SIZE,
+            width: CELL_SIZE,
+            height: CELL_SIZE,
+            pointerEvents: "none",
+          }}
+        >
+          {marker.content}
+        </div>
+      ))}
 
       <div
         className="rounded-full shadow-md transition-[left,top] duration-100 ease-linear"

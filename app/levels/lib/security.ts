@@ -48,3 +48,12 @@ export const cameras: Camera[] = [
   { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'camera.png' },
   { id: 'cam2', x: 9, y: 5, direction: 'LEFT', range: 3, sprite: 'camera.png' },
 ];
+
+export function isOpen(x: number, y: number): boolean {
+  const cell = grid[y]?.[x];
+  return cell === 1 || cell === 2;
+}
+
+export function isExit(x: number, y: number): boolean {
+  return grid[y]?.[x] === 2;
+}
