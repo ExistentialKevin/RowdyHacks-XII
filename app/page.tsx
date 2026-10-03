@@ -5,7 +5,7 @@ import RightColumn from "./components/RightColumn";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#090a0f] text-zinc-100 flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">

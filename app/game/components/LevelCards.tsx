@@ -30,33 +30,33 @@ export default function LevelCard({
   const isCompleted = clampedCurrent >= safeTotal;
 
   const difficultyBadgeColor = {
-    Beginner: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-    Intermediate: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-    Advanced: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-    Expert: "border-rose-500/30 bg-rose-500/10 text-rose-400",
-  }[difficulty] || "border-cyan-500/30 bg-cyan-500/10 text-cyan-400";
+    Beginner: "border-accent-primary/40 bg-accent-secondary/50 text-accent-primary",
+    Intermediate: "border-amber-400/40 bg-amber-950/30 text-amber-300",
+    Advanced: "border-orange-400/40 bg-orange-950/30 text-orange-300",
+    Expert: "border-rose-400/40 bg-rose-950/30 text-rose-300",
+  }[difficulty] || "border-accent-primary/40 bg-accent-secondary/50 text-accent-primary";
 
   const cardContent = (
     <div
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 p-5 shadow-lg backdrop-blur-md transition-all duration-300 ${
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-panel p-5 shadow-lg backdrop-blur-md transition-all duration-300 ${
         isLocked
-          ? "border-zinc-800/60 opacity-60 grayscale-[40%]"
-          : "border-zinc-800/90 hover:-translate-y-1 hover:border-cyan-500/50 hover:shadow-cyan-500/10 hover:shadow-2xl cursor-pointer"
+          ? "border-panel-border/60 opacity-60 grayscale-[40%]"
+          : "border-panel-border hover:-translate-y-1 hover:border-panel-border-hover hover:shadow-accent-primary/5 hover:shadow-2xl cursor-pointer"
       }`}
     >
       {/* Top accent glow */}
-      <div className="pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-cyan-500/10 blur-2xl transition-all duration-500 group-hover:bg-cyan-500/20" />
+      <div className="pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-accent-primary/10 blur-2xl transition-all duration-500 group-hover:bg-accent-primary/20" />
 
       {/* Header section */}
       <div>
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {levelNumber && (
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 text-xs font-bold text-zinc-300">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent-secondary text-xs font-bold text-accent-primary border border-panel-border">
                 {levelNumber}
               </span>
             )}
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {category}
             </span>
           </div>
@@ -68,21 +68,21 @@ export default function LevelCard({
           </span>
         </div>
 
-        <h3 className="text-lg font-bold tracking-tight text-white transition-colors group-hover:text-cyan-300">
+        <h3 className="text-lg font-bold tracking-tight text-foreground transition-colors group-hover:text-accent-primary">
           {name}
         </h3>
 
-        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-zinc-400">
+        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
           {description}
         </p>
       </div>
 
       {/* Bottom Progress Bar Section */}
-      <div className="mt-6 pt-4 border-t border-zinc-800/70">
+      <div className="mt-6 pt-4 border-t border-panel-border">
         <div className="mb-2 flex items-center justify-between text-xs">
-          <span className="font-medium text-zinc-400">
+          <span className="font-medium text-muted-foreground">
             {isCompleted ? (
-              <span className="flex items-center gap-1 font-semibold text-emerald-400">
+              <span className="flex items-center gap-1 font-semibold text-accent-primary">
                 <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
@@ -98,21 +98,17 @@ export default function LevelCard({
               "Progress"
             )}
           </span>
-          <span className="font-semibold text-zinc-200">
-            <span className="text-cyan-400">{clampedCurrent}</span>
-            <span className="text-zinc-500"> / </span>
+          <span className="font-semibold text-foreground">
+            <span className="text-accent-primary">{clampedCurrent}</span>
+            <span className="text-muted-foreground"> / </span>
             <span>{safeTotal} items</span>
           </span>
         </div>
 
         {/* Progress track & bar */}
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-accent-secondary/50 border border-panel-border">
           <div
-            className={`h-full rounded-full transition-all duration-500 ease-out ${
-              isCompleted
-                ? "bg-gradient-to-r from-emerald-500 to-teal-400"
-                : "bg-gradient-to-r from-cyan-500 via-sky-400 to-indigo-500"
-            }`}
+            className="h-full rounded-full transition-all duration-500 ease-out bg-accent-primary"
             style={{ width: `${percent}%` }}
           />
         </div>

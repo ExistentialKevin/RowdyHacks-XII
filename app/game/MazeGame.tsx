@@ -24,7 +24,7 @@ export default function MazeGame() {
   return (
     <div className="flex w-full max-w-5xl flex-col gap-6 lg:flex-row">
       <div className="flex flex-col gap-3 lg:w-[480px]">
-        <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             {status === "loading" && "Loading Python runtime…"}
             {status === "ready" && "Python ready"}
@@ -34,14 +34,14 @@ export default function MazeGame() {
             <button
               onClick={() => pyodide.current && run(pyodide.current, code)}
               disabled={status !== "ready" || running}
-              className="rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-40 dark:hover:bg-[#ccc]"
+              className="rounded-xl bg-accent-primary px-4 py-1.5 text-sm font-semibold text-accent-primary-foreground shadow-md shadow-accent-primary/20 transition-all hover:brightness-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
             >
               {running ? "Running…" : "Run code"}
             </button>
             <button
               onClick={reset}
               disabled={running}
-              className="rounded-full border border-black/[.08] px-4 py-1.5 text-sm font-medium transition-colors hover:bg-black/[.04] disabled:opacity-40 dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+              className="rounded-xl border border-panel-border bg-panel-elevated px-4 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-accent-primary/40 disabled:opacity-40"
             >
               Reset
             </button>
@@ -53,15 +53,15 @@ export default function MazeGame() {
       </div>
 
       <div className="flex flex-1 flex-col items-center gap-4">
-        <div className="flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">
-          <span>Moves: {moves}</span>
+        <div className="flex items-center gap-6 text-sm text-muted-foreground font-mono">
+          <span>Moves: <span className="text-accent-primary font-bold">{moves}</span></span>
         </div>
 
         <MazeBoard player={player} />
 
         {won && (
-          <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-            Your code solved the maze in {moves} moves!
+          <p className="text-lg font-semibold text-accent-primary">
+            🎉 Infiltration successful! Solved the maze in {moves} moves!
           </p>
         )}
       </div>

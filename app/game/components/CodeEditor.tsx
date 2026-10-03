@@ -23,7 +23,7 @@ export function CodeEditor({
         });
       }}
       spellCheck={false}
-      className="h-80 w-full resize-none rounded-lg border border-black/[.08] bg-zinc-900 p-3 font-mono text-sm text-zinc-100 outline-none dark:border-white/[.145]"
+      className="h-80 w-full resize-none rounded-xl border border-panel-border bg-panel p-3 font-mono text-sm text-foreground outline-none focus:border-panel-border-hover shadow-inner"
     />
   );
 }
