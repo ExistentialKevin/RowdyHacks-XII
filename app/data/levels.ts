@@ -12,7 +12,7 @@ export interface LevelData {
 export const initialLevels: LevelData[] = [
   {
     levelNumber: 1,
-    name: "Terminal Breach",
+    name: "Variables",
     description: "Initiate Python basics: navigate hallways, discover sensor trips, and unlock the primary perimeter airlock.",
     current: 5,
     total: 5,

@@ -7,12 +7,12 @@ export default function Navbar() {
         {/* Brand */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-secondary border border-panel-border shadow-lg shadow-accent-primary/10">
-            <span className="font-mono text-lg font-black text-accent-primary">⚡</span>
+            <span className="font-mono text-lg font-black text-accent-primary">🔒</span>
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-base font-bold tracking-tight text-foreground">
-                HEIST<span className="text-accent-primary">_OS</span>
+                HEIST<span className="text-accent-primary">SCHOOL</span>
               </span>
               <span className="rounded bg-accent-secondary/60 border border-panel-border px-1.5 py-0.5 text-[10px] font-mono font-medium text-accent-primary">
                 v0.1
