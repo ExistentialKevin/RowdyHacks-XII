@@ -87,6 +87,7 @@ export default function SecurityMazeGame() {
 
   const pyodideRef = useRef<any>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const moveQueueRef = useRef<string[]>([]);
 
   // Tutorial spotlight targets
   const [tutorialActive, setTutorialActive] = useState(false);
@@ -154,7 +155,6 @@ export default function SecurityMazeGame() {
     async function loadPyodideRuntime() {
       try {
         appendLog("Loading Python WebAssembly runtime...");
-        // Load pyodide script dynamically if not present
         if (!(window as any).loadPyodide) {
           const script = document.createElement("script");
           script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
@@ -202,7 +202,6 @@ export default function SecurityMazeGame() {
       for (let i = 1; i <= cam.range; i++) {
         const cx = cam.x + dx * i;
         const cy = cam.y + dy * i;
-        // Vision blocked by walls
         if (grid[cy]?.[cx] === 0) break;
         visionSet.add(`${cx},${cy}`);
       }
@@ -229,7 +228,7 @@ export default function SecurityMazeGame() {
   }, []);
 
   // Reset game state
-  const resetGame = useCallback(() => {
+  /*const resetGame = useCallback(() => {
     setPlayer(START);
     setItems(JSON.parse(JSON.stringify(INITIAL_ITEMS)));
     setCameras(INITIAL_CAMERAS);
@@ -237,13 +236,22 @@ export default function SecurityMazeGame() {
     setWon(false);
     setCaught(false);
     setRunning(false);
+    moveQueueRef.current = [];
     appendLog("Game reset to starting position.");
-  }, [appendLog]);
+  }, [appendLog]); */
 
-  // Move player with collision, item collection, and security checks
-  const movePlayer = useCallback((directionStr: string) => {
-    setPlayer(prev => {
-      if (won || caught) return prev;
+  // Execute a single step movement from the queue
+  const processNextMove = useCallback(() => {
+    if (moveQueueRef.current.length === 0) {
+      setRunning(false);
+      appendLog("--- Execution Completed ---");
+      return;
+    }
+
+    const directionStr = moveQueueRef.current.shift()!;
+
+    setPlayer(prevPlayer => {
+      if (won || caught) return prevPlayer;
 
       let dx = 0;
       let dy = 0;
@@ -253,16 +261,18 @@ export default function SecurityMazeGame() {
       else if (dir === 'LEFT') dx = -1;
       else if (dir === 'RIGHT') dx = 1;
 
-      const nextX = prev.x + dx;
-      const nextY = prev.y + dy;
+      const nextX = prevPlayer.x + dx;
+      const nextY = prevPlayer.y + dy;
 
       if (!isOpen(nextX, nextY)) {
         appendLog(`Collision! Cannot move into wall at (${nextX}, ${nextY})`);
-        return prev;
+        return prevPlayer;
       }
 
       const nextPos = { x: nextX, y: nextY };
-      setM(m => m + 1);
+
+      // Increment moves cleanly by exactly 1
+      setMoves(n =>n + 1);
 
       // Check item collection
       setItems(prevItems =>
@@ -279,48 +289,57 @@ export default function SecurityMazeGame() {
       if (checkCameraDetection(nextPos, cameras)) {
         setCaught(true);
         appendLog("ALARM! You were spotted by a security camera!");
+        moveQueueRef.current = []; // Clear remaining queue
+        setRunning(false);
+        return nextPos;
       }
 
-      // Check win condition (All items collected and on exit cell 2)
-      const updatedItems = items.map(item => (item.x === nextX && item.y === nextY ? { ...item, collected: true } : item));
-      const allCollected = updatedItems.every(i => i.collected);
-      if (grid[nextY]?.[nextX] === 2) {
-        if (allCollected) {
-          setWon(true);
-          appendLog("Success! All items collected and reached the exit!");
-        } else {
-          appendLog("Reached exit, but you still need to collect all 3 items!");
+      // Check win condition
+      setItems(currentItems => {
+        const allCollected = currentItems.every(i => i.collected);
+        if (grid[nextY]?.[nextX] === 2) {
+          if (allCollected) {
+            setWon(true);
+            appendLog("Success! All items collected and reached the exit!");
+            moveQueueRef.current = [];
+            setRunning(false);
+          } else {
+            appendLog("Reached exit, but you still need to collect all 3 items!");
+          }
         }
-      }
+        return currentItems;
+      });
 
       return nextPos;
     });
-  }, [won, caught, cameras, items, appendLog]);
 
-  // Helper setter for move count inside callback
-  const setM = setMoves;
+    // Schedule the next grid step after a 300ms delay for smooth animation
+    setTimeout(() => {
+      processNextMove();
+    }, 300);
+  }, [won, caught, cameras, appendLog]);
 
   // Run Python Code
   const runPythonCode = async () => {
     if (!pyodideRef.current || running) return;
     setRunning(true);
+    moveQueueRef.current = [];
     appendLog("--- Executing Python Code ---");
 
     try {
-      // Expose python move helper function
+      // Expose python move helper function to queue moves
       pyodideRef.current.globals.set("move", (direction: string) => {
-        movePlayer(direction);
+        moveQueueRef.current.push(direction);
       });
       pyodideRef.current.globals.set("print_log", (msg: string) => {
         appendLog(`[Python] ${msg}`);
       });
 
-      // Redirect python stdout
       await pyodideRef.current.runPythonAsync(`
-                import sys
-                import io
-                sys.stdout = io.StringIO()
-            `);
+        import sys
+        import io
+        sys.stdout = io.StringIO()
+      `);
 
       await pyodideRef.current.runPythonAsync(code);
 
@@ -328,10 +347,11 @@ export default function SecurityMazeGame() {
       if (stdout) {
         appendLog(stdout.trim());
       }
-      appendLog("--- Execution Completed ---");
+
+      // Start stepping through the queued moves smoothly
+      processNextMove();
     } catch (err: any) {
       appendLog(`Error: ${err.message}`);
-    } finally {
       setRunning(false);
     }
   };
@@ -351,11 +371,11 @@ export default function SecurityMazeGame() {
             <p className="text-sm text-zinc-400">Navigate past camera vision cones, collect all 3 items, and reach the exit!</p>
           </div>
           <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-300 border border-zinc-800">
-                        {pyodideStatus === "loading" && "Loading Python runtime..."}
-                      {pyodideStatus === "ready" && "🟢 Python Runtime Ready"}
-                      {pyodideStatus === "error" && "🔴 Python Runtime Error"}
-                    </span>
+          <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-300 border border-zinc-800">
+            {pyodideStatus === "loading" && "Loading Python runtime..."}
+            {pyodideStatus === "ready" && "🟢 Python Runtime Ready"}
+            {pyodideStatus === "error" && "🔴 Python Runtime Error"}
+          </span>
             <button
                 ref={runButtonRef}
                 onClick={runPythonCode}
@@ -366,7 +386,8 @@ export default function SecurityMazeGame() {
             </button>
             <button
                 onClick={resetGame}
-                className="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 border border-zinc-700"
+                disabled={running}
+                className="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 border border-zinc-700 disabled:opacity-50"
             >
               Reset
             </button>
@@ -472,19 +493,19 @@ export default function SecurityMazeGame() {
                                       onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                                   />
                                   <span className="absolute -bottom-2 text-[9px] font-mono font-bold text-red-400 uppercase">
-                                                        {cameraHere.direction[0]}
-                                                    </span>
+                            {cameraHere.direction[0]}
+                          </span>
                                 </div>
                             )}
 
-                            {/* Player Character */}
+                            {/* Player Character (.jpg image) */}
                             {isPlayerHere && (
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-zinc-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.9)] z-10 animate-pulse">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.9)] z-10 animate-pulse overflow-hidden">
                                   <img
-                                      src="/assets/lil_guy.jpg" // Ensure this file exists in your /public folder
+                                      src="/my-character.jpg"
                                       alt="Player"
                                       className="h-full w-full object-cover"
-                                  />️
+                                  />
                                 </div>
                             )}
                           </div>
@@ -496,7 +517,7 @@ export default function SecurityMazeGame() {
 
             {/* Status Banners */}
             {caught && (
-                <div className="w-full max-w-lg rounded-xl bg-red-950/80 border border-red-600 p-4 text-center text-red-200 shadow-xl animate-shake">
+                <div className="w-full max-w-lg rounded-xl bg-red-950/80 border border-red-600 p-4 text-center text-red-200 shadow-xl">
                   <h3 className="text-lg font-bold">🚨 CAUGHT BY SECURITY CAMERA! 🚨</h3>
                   <p className="text-sm mt-1">Avoid camera vision cones or time your movements carefully.</p>
                   <button onClick={resetGame} className="mt-3 rounded-full bg-red-600 px-6 py-1.5 text-sm font-semibold text-white hover:bg-red-500">
