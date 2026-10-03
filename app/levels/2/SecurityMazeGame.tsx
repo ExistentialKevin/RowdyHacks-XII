@@ -33,17 +33,17 @@ export interface Item {
 // MAZE CONFIGURATION & CONSTANTS
 // ==========================================
 export const grid: Cell[][] = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0],
-  [0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0],
-  [0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0],
-  [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0],
-  [0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0],
-  [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0],
-  [0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0],
-  [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0],
-  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+  [0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0],
+  [0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0],
+  [0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0],
+  [0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
 
 export const START: Pos = { x: 1, y: 1 };
@@ -56,7 +56,7 @@ export const INITIAL_ITEMS: Item[] = [
 
 export const INITIAL_CAMERAS: Camera[] = [
   { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
-  { id: 'cam2', x: 9, y: 5, direction: 'LEFT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
+  { id: 'cam2', x: 9, y: 5, direction: 'DOWN', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
   { id: 'cam3', x: 7, y: 3, direction: 'RIGHT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
 ];
 
@@ -336,18 +336,6 @@ export default function SecurityMazeGame() {
     }
   };
 
-  // Keyboard manual controls
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); movePlayer('UP'); }
-      if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); movePlayer('DOWN'); }
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); movePlayer('LEFT'); }
-      if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); movePlayer('RIGHT'); }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [movePlayer]);
-
   const visionCells = getCameraVisionCells();
   const collectedCount = items.filter(i => i.collected).length;
 
@@ -492,7 +480,11 @@ export default function SecurityMazeGame() {
                             {/* Player Character */}
                             {isPlayerHere && (
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-zinc-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.9)] z-10 animate-pulse">
-                                  🕵️‍♂️
+                                  <img
+                                      src="/assets/lil_guy.jpg" // Ensure this file exists in your /public folder
+                                      alt="Player"
+                                      className="h-full w-full object-cover"
+                                  />️
                                 </div>
                             )}
                           </div>
@@ -522,10 +514,6 @@ export default function SecurityMazeGame() {
                   </button>
                 </div>
             )}
-
-            <div className="text-xs text-zinc-500 text-center">
-              Tip: Use WASD or Arrow Keys for manual movement, or test your custom Python algorithms!
-            </div>
           </div>
         </div>
 

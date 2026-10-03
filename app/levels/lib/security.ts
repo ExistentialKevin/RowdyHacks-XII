@@ -8,7 +8,7 @@ export interface Camera {
   y: number;
   direction: Direction;
   range: number; // Up to 3 blocks
-  sprite: string; // e.g., 'camera.png'
+  sprite: string; // e.g., 'camera.jpg'
 }
 
 export interface Item {
@@ -45,8 +45,8 @@ export const items: Item[] = [
 
 // Cameras with 3-block sight ranges
 export const cameras: Camera[] = [
-  { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'camera.png' },
-  { id: 'cam2', x: 9, y: 5, direction: 'LEFT', range: 3, sprite: 'camera.png' },
+  { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'camera.jpg' },
+  { id: 'cam2', x: 9, y: 5, direction: 'LEFT', range: 3, sprite: 'camera.jpg' },
 ];
 
 export function isOpen(x: number, y: number): boolean {
