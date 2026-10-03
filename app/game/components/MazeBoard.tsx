@@ -1,17 +1,16 @@
 import { MAZE, type Pos } from "../lib/maze";
 import { CELL_SIZE } from "../lib/constants";
 
-// Adjust cell colors here to restyle the board.
 function cellClassName(cell: number) {
-  if (cell === 0) return "bg-zinc-800 dark:bg-black";
-  if (cell === 2) return "bg-emerald-400 dark:bg-emerald-500";
-  return "bg-zinc-100 dark:bg-zinc-900";
+  if (cell === 0) return "bg-[#090d13]"; // Wall
+  if (cell === 2) return "bg-accent-primary"; // Exit goal
+  return "bg-panel-muted"; // Pathway
 }
 
 export function MazeBoard({ player }: { player: Pos }) {
   return (
     <div
-      className="relative border border-black/[.08] bg-zinc-100 dark:border-white/[.145] dark:bg-zinc-900"
+      className="relative rounded-2xl overflow-hidden border border-panel-border bg-panel shadow-2xl shadow-black/40"
       style={{
         width: MAZE[0].length * CELL_SIZE,
         height: MAZE.length * CELL_SIZE,
@@ -29,13 +28,14 @@ export function MazeBoard({ player }: { player: Pos }) {
               width: CELL_SIZE,
               height: CELL_SIZE,
               boxSizing: "border-box",
-              borderRight: "1px solid rgba(0,0,0,0.05)",
-              borderBottom: "1px solid rgba(0,0,0,0.05)",
+              borderRight: "1px solid rgba(113, 246, 208, 0.05)",
+              borderBottom: "1px solid rgba(113, 246, 208, 0.05)",
             }}
           />
         )),
       )}
 
+      {/* Player marker */}
       <div
         className="rounded-full shadow-md transition-[left,top] duration-100 ease-linear"
         style={{
