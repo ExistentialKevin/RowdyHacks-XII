@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import MazeGame from "./MazeGame";
+import MazeGame from "../MazeGame";
 
 export const metadata: Metadata = {
   title: "Maze Game",
@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function GamePage() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
-      <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-[#090a0f] px-6 py-16 font-sans text-zinc-100">
+      <h1 className="text-2xl font-semibold tracking-tight text-white">
         Maze Runner
       </h1>
       <MazeGame />
