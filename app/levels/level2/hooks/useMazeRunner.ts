@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { isExit, isOpen, START, type Pos } from "../lib/maze";
+import { isExit, isOpen, START, type Pos } from "../lib/security";
 import { DIRECTION_DELTAS, isDirection } from "../lib/directions";
 import { MAX_STEPS, STEP_DELAY_MS } from "../lib/constants";
 import type { PyodideInterface } from "./usePyodideRuntime";

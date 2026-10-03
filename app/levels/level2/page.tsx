@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import MazeGame from "./MazeGame";
+import SecurityMazeGame from "./SecurityMazeGame";
 
 export const metadata: Metadata = {
-  title: "Maze Game",
+  title: "Security Maze Game",
   description: "Guide the player through the maze to the exit.",
 };
 
@@ -12,7 +12,7 @@ export default function GamePage() {
       <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
         Maze Runner
       </h1>
-      <MazeGame />
+      <SecurityMazeGame />
     </div>
   );
 }

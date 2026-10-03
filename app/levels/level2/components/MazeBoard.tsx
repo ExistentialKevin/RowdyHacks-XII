@@ -1,4 +1,4 @@
-import { MAZE, type Pos } from "../lib/maze";
+import { MAZE, type Pos } from "../lib/security";
 import { CELL_SIZE } from "../lib/constants";
 
 // Adjust cell colors here to restyle the board.
