@@ -185,98 +185,94 @@ export default function SecurityMazeGame() {
     moveQueueRef.current = [];
   }, []);
 
-  // Execute a single step movement from the queue
+  // Execute a single step movement from the queue cleanly
   const processNextMove = useCallback(() => {
     if (moveQueueRef.current.length === 0) {
       setRunning(false);
       appendLog("--- Execution Completed ---");
 
       // Check if finished executing but not on exit grid or didn't win
-      setPlayer(currentPlayer => {
-        setItems(currentItems => {
-          const allCollected = currentItems.every(i => i.collected);
-          const atExit = grid[currentPlayer.y]?.[currentPlayer.x] === 2;
-          if (!atExit || !allCollected) {
-            setFailedIncomplete(true);
-            appendLog("Finished code execution, but you did not reach the exit with all items!");
-          }
-          return currentItems;
-        });
-        return currentPlayer;
-      });
+      const allCollected = items.every(i => i.collected);
+      const atExit = grid[player.y]?.[player.x] === 2;
+      if (!atExit || !allCollected) {
+        setFailedIncomplete(true);
+        appendLog("Finished code execution, but you did not reach the exit with all items!");
+      }
       return;
     }
 
     const directionStr = moveQueueRef.current.shift()!;
 
-    // Increment move counter cleanly by exactly 1 outside the updater
+    let dx = 0;
+    let dy = 0;
+    const dir = directionStr.toUpperCase();
+    if (dir === 'UP') dy = -1;
+    else if (dir === 'DOWN') dy = 1;
+    else if (dir === 'LEFT') dx = -1;
+    else if (dir === 'RIGHT') dx = 1;
+
+    const nextX = player.x + dx;
+    const nextY = player.y + dy;
+
+    // 1. Wall Collision Check
+    if (!isOpen(nextX, nextY)) {
+      appendLog(`Collision! Cannot move into wall at (${nextX}, ${nextY})`);
+      setRunning(false);
+      moveQueueRef.current = [];
+      return;
+    }
+
+    const nextPos = { x: nextX, y: nextY };
     setMoves(m => m + 1);
+    setPlayer(nextPos);
 
-    setPlayer(prevPlayer => {
-      if (won || caught) return prevPlayer;
+    // 2. Camera Detection Check
+    if (checkCameraDetection(nextPos, cameras)) {
+      setCaught(true);
+      appendLog("ALARM! You were spotted by a security camera!");
+      moveQueueRef.current = [];
+      setRunning(false);
+      return;
+    }
 
-      let dx = 0;
-      let dy = 0;
-      const dir = directionStr.toUpperCase();
-      if (dir === 'UP') dy = -1;
-      else if (dir === 'DOWN') dy = 1;
-      else if (dir === 'LEFT') dx = -1;
-      else if (dir === 'RIGHT') dx = 1;
-
-      const nextX = prevPlayer.x + dx;
-      const nextY = prevPlayer.y + dy;
-
-      if (!isOpen(nextX, nextY)) {
-        appendLog(`Collision! Cannot move into wall at (${nextX}, ${nextY})`);
-        return prevPlayer;
-      }
-
-      const nextPos = { x: nextX, y: nextY };
-
-      // Check item collection
-      setItems(prevItems =>
-          prevItems.map(item => {
-            if (!item.collected && item.x === nextX && item.y === nextY) {
-              appendLog(`Collected Item #${item.id}!`);
-              return { ...item, collected: true };
-            }
-            return item;
-          })
-      );
-
-      // Check camera spot
-      if (checkCameraDetection(nextPos, cameras)) {
-        setCaught(true);
-        appendLog("ALARM! You were spotted by a security camera!");
-        moveQueueRef.current = []; // Clear remaining queue
-        setRunning(false);
-        return nextPos;
-      }
-
-      // Check win condition
-      setItems(currentItems => {
-        const allCollected = currentItems.every(i => i.collected);
-        if (grid[nextY]?.[nextX] === 2) {
-          if (allCollected) {
-            setWon(true);
-            appendLog("Success! All items collected and reached the exit!");
-            moveQueueRef.current = [];
-            setRunning(false);
-          } else {
-            appendLog("Reached exit, but you still need to collect all 3 items!");
+    // 3. Item Collection Check
+    let itemCollectedThisStep = false;
+    setItems(prevItems =>
+        prevItems.map(item => {
+          if (!item.collected && item.x === nextX && item.y === nextY) {
+            itemCollectedThisStep = true;
+            return { ...item, collected: true };
           }
-        }
-        return currentItems;
-      });
+          return item;
+        })
+    );
+    if (itemCollectedThisStep) {
+      appendLog(`Collected Item!`);
+    }
 
-      return nextPos;
-    });
+    // 4. Win Condition Check
+    const updatedItemsState = items.map(item =>
+        (item.x === nextX && item.y === nextY) ? { ...item, collected: true } : item
+    );
+    const allItemsCollected = updatedItemsState.every(i => i.collected);
 
-    // Schedule the next grid step after a 300ms delay for smooth animation
+    if (grid[nextY]?.[nextX] === 2) {
+      if (allItemsCollected) {
+        setWon(true);
+        appendLog("Success! All items collected and reached the exit!");
+        moveQueueRef.current = [];
+        setRunning(false);
+        return;
+      } else {
+        appendLog("Reached exit, but you still need to collect all 3 items!");
+      }
+    }
+
+    // Schedule next step smoothly
     setTimeout(() => {
       processNextMove();
     }, 300);
-  }, [won, caught, cameras, appendLog]);
+  }, [player, items, cameras, won, caught, appendLog]);
 
   // Run Python Code
   const runPythonCode = async () => {
