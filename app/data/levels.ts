@@ -18,7 +18,7 @@ export const initialLevels: LevelData[] = [
     total: 5,
     difficulty: "Beginner",
     category: "Tutorial",
-    href: "/game/1",
+    href: "/levels/1",
   },
   {
     levelNumber: 2,
@@ -28,7 +28,7 @@ export const initialLevels: LevelData[] = [
     total: 6,
     difficulty: "Intermediate",
     category: "Infiltration",
-    href: "/game/2",
+    href: "/levels/2",
   },
   {
     levelNumber: 3,
@@ -38,7 +38,7 @@ export const initialLevels: LevelData[] = [
     total: 8,
     difficulty: "Advanced",
     category: "Cracking",
-    href: "/game/3",
+    href: "/levels/3",
   },
   {
     levelNumber: 4,
@@ -48,6 +48,6 @@ export const initialLevels: LevelData[] = [
     total: 10,
     difficulty: "Expert",
     category: "Heist",
-    href: "/game/4",
+    href: "/levels/4",
   },
 ];
