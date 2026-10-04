@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import TutorialOverlay, { TutorialStep } from "../components/TutorialOverlay";
+import HintMascot from "../components/HintMascot";
 
 const TUTORIAL_STORAGE_KEY = "tutorial-level2-seen";
 
@@ -59,6 +60,13 @@ export const INITIAL_CAMERAS: Camera[] = [
   { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
   { id: 'cam2', x: 9, y: 5, direction: 'LEFT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
   { id: 'cam3', x: 7, y: 3, direction: 'RIGHT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
+];
+
+// Lil's hints, in order. He says "psst** try <hint>" and gives up after these.
+const LEVEL_HINTS = [
+  "tracing a route on the board before you code. Find a path from P to each yellow ? tile, then to EXIT, and write it down as moves.",
+  "treating red tiles like lava. Cameras only see in a straight line, and walls block their view, so look for a way around their sightline.",
+  'a loop instead of copy-pasting moves: for _ in range(4): move("DOWN") walks four tiles in one line.',
 ];
 
 const STARTER_PYTHON_CODE = `# Navigate the grid. Avoid camera sightlines.
@@ -575,6 +583,7 @@ export default function SecurityMazeGame() {
       </div>
 
       <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} mascot />
+      <HintMascot hints={LEVEL_HINTS} hidden={tutorialActive} />
     </>
   );
 }
