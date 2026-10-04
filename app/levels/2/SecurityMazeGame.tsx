@@ -291,7 +291,7 @@ export default function SecurityMazeGame() {
         const dy =
           cam.direction === "DOWN" ? 1 : cam.direction === "UP" ? -1 : 0;
 
-        for (let i = 1; i <= cam.range; i++) {
+        for (let i = 0; i <= cam.range; i++) {
           const cx = cam.x + dx * i;
           const cy = cam.y + dy * i;
           if (grid[cy]?.[cx] === 0) break;

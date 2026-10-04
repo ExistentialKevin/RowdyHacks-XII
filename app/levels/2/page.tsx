@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function GamePage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar />
+      <Navbar active="heistmap"/>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:py-10">
         <SecurityMazeGame />
       </main>

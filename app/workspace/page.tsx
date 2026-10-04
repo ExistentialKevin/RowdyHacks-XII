@@ -7,7 +7,8 @@ import TicketBoard from "./components/TicketBoard";
 
 export const metadata: Metadata = {
   title: "Planning Room · Heist School",
-  description: "Repo, editor and tickets for your team project, all on one page.",
+  description:
+    "Repo, editor and tickets for your team project, all on one page.",
 };
 
 // UI shell only — every panel renders placeholder data from ./data/mock.ts.

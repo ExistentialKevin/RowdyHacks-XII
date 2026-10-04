@@ -2,28 +2,39 @@ import ContinueSession from "./ContinueSession";
 import LevelTable from "./LevelTable";
 import GuideGreeting from "./GuideGreeting";
 import { initialLevels, type LevelData } from "../data/levels";
+import ScanlineToggle from "./ScanlineToggle";
+import { setScanline, useScanline } from "./scanlineState";
 
 interface MiddleColumnProps {
   levels?: LevelData[];
 }
 
-export default function MiddleColumn({ levels = initialLevels }: MiddleColumnProps) {
+function isScanlineVisible() {
+  return useScanline;
+}
+
+export default function MiddleColumn({
+  levels = initialLevels,
+}: MiddleColumnProps) {
   // Most recent unfinished, unlocked level with a playable page.
-  const active = levels.find((l) => !l.locked && l.href && l.current < l.total) ?? levels[0];
+  const active =
+    levels.find((l) => !l.locked && l.href && l.current < l.total) ?? levels[0];
 
   return (
     <section className="w-full space-y-10">
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <div className="text-[13px] text-dim">
-            root@heistschool:~$ <span className="text-foreground">ls ./missions --available</span>
+            root@heistschool:~${" "}
+            <span className="text-foreground">ls ./missions --available</span>
           </div>
           <h1 className="mb-4 mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-[38px] sm:leading-tight">
-            Available infiltration levels<span className="cursor-blink text-accent-primary">_</span>
+            Available infiltration levels
+            <span className="cursor-blink text-accent-primary">_</span>
           </h1>
           <p className="text-[13px] leading-7 text-muted-foreground">
-            Every job is a Python puzzle. Write the plan, run it, and watch your crew move.
-            Get spotted and it's back to the drawing board.
+            Every job is a Python puzzle. Write the plan, run it, and watch your
+            crew move. Get spotted and it's back to the drawing board.
           </p>
           <GuideGreeting levels={levels} active={active} />
         </div>
@@ -34,13 +45,29 @@ export default function MiddleColumn({ levels = initialLevels }: MiddleColumnPro
         <LevelTable levels={levels} />
         <div className="mt-3.5 flex items-center justify-between text-[11px] text-dim">
           <div className="flex gap-5">
-            <span className="flex items-center gap-1.5"><i className="h-[7px] w-[7px] bg-accent-primary" />complete</span>
-            <span className="flex items-center gap-1.5"><i className="h-[7px] w-[7px] bg-slate-yellow" />active</span>
-            <span className="flex items-center gap-1.5"><i className="h-[7px] w-[7px] bg-faint" />locked</span>
+            <span className="flex items-center gap-1.5">
+              <i className="h-[7px] w-[7px] bg-accent-primary" />
+              complete
+            </span>
+            <span className="flex items-center gap-1.5">
+              <i className="h-[7px] w-[7px] bg-slate-yellow" />
+              active
+            </span>
+            <span className="flex items-center gap-1.5">
+              <i className="h-[7px] w-[7px] bg-faint" />
+              locked
+            </span>
           </div>
-          <span>[ fake_mustache: on ]</span>
+          <ScanlineToggle isScanlineVisible={useScanline} />
         </div>
       </div>
+      {/* Added z index to fix scanlines also being applied to Navbar*/}
+      <div
+        aria-hidden="true"
+        className={
+          "scanlines pointer-events-none absolute inset-0 z-10 ${isScanlineVisible ? 'visible' : 'invisible' }"
+        }
+      />
     </section>
   );
 }

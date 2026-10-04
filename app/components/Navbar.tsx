@@ -13,7 +13,7 @@ const LINKS = [
   },
 ];
 
-type NavKey = "operations" | "workspace";
+type NavKey = "operations" | "workspace" | "heistmap";
 
 const ACTIVE_LINK =
   "rounded-lg bg-panel-elevated border border-panel-border px-3.5 py-2 text-foreground font-semibold transition hover:border-accent-primary/30";
@@ -57,8 +57,9 @@ export default function Navbar({ active = "operations" }: { active?: NavKey }) {
             Operations
           </Link>
           <Link
-            href="/game/1"
-            className="rounded-lg px-3.5 py-2 hover:bg-panel-elevated hover:text-accent-primary transition"
+            href="/levels/2"
+            aria-current={active === "heistmap" ? "page" : undefined}
+            className={active === "heistmap" ? ACTIVE_LINK : IDLE_LINK}
           >
             Heist Map
           </Link>
