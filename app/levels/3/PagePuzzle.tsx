@@ -139,6 +139,7 @@ export default function PagePuzzle() {
   // Initialize Pyodide runtime on mount
   useEffect(() => {
     let isMounted = true;
+    let injectedScript: HTMLScriptElement | null = null;
     async function loadPyodideRuntime() {
       try {
         appendLog("Loading Python WebAssembly runtime...");
@@ -148,6 +149,7 @@ export default function PagePuzzle() {
           script.src =
             "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
           script.async = true;
+          injectedScript = script;
           document.body.appendChild(script);
           await new Promise((resolve, reject) => {
             script.onload = resolve;
@@ -174,6 +176,9 @@ export default function PagePuzzle() {
     loadPyodideRuntime();
     return () => {
       isMounted = false;
+      if (injectedScript && injectedScript.parentNode) {
+        injectedScript.parentNode.removeChild(injectedScript);
+      }
     };
   }, [appendLog]);
 

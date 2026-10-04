@@ -34,6 +34,7 @@ export function usePyodideRuntime(onOutput: (msg: string) => void) {
 
   useEffect(() => {
     let cancelled = false;
+    let injectedScript: HTMLScriptElement | null = null;
 
     async function setup() {
       try {
@@ -43,6 +44,7 @@ export function usePyodideRuntime(onOutput: (msg: string) => void) {
             script.src = PYODIDE_SCRIPT_URL;
             script.onload = () => resolve();
             script.onerror = () => reject(new Error("Failed to load Pyodide script."));
+            injectedScript = script;
             document.body.appendChild(script);
           });
         }
@@ -65,6 +67,9 @@ export function usePyodideRuntime(onOutput: (msg: string) => void) {
 
     return () => {
       cancelled = true;
+      if (injectedScript && injectedScript.parentNode) {
+        injectedScript.parentNode.removeChild(injectedScript);
+      }
     };
   }, []);
 

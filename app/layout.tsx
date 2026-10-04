@@ -23,8 +23,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       data-theme="dark"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground selection:bg-accent-primary/25 selection:text-accent-primary">
+      <body
+        className="min-h-full flex flex-col bg-background text-foreground selection:bg-accent-primary/25 selection:text-accent-primary"
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>

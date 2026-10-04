@@ -2,7 +2,6 @@
 
 import CodeMirror from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
-import { indentUnit } from "@codemirror/language";
 import { tokyoNight } from "@uiw/codemirror-theme-tokyo-night";
 
 export function CodeEditor({
@@ -18,7 +17,7 @@ export function CodeEditor({
         value={value}
         onChange={onChange}
         theme={tokyoNight}
-        extensions={[python(), indentUnit.of("    ")]}
+        extensions={[python()]}
         basicSetup={{
           lineNumbers: true,
           foldGutter: false,

@@ -151,6 +151,7 @@ export default function SecurityMazeGame() {
   // Initialize Pyodide runtime on mount
   useEffect(() => {
     let isMounted = true;
+    let injectedScript: HTMLScriptElement | null = null;
     async function loadPyodideRuntime() {
       try {
         appendLog("Loading Python WebAssembly runtime...");
@@ -159,6 +160,7 @@ export default function SecurityMazeGame() {
           const script = document.createElement("script");
           script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
           script.async = true;
+          injectedScript = script;
           document.body.appendChild(script);
           await new Promise((resolve, reject) => {
             script.onload = resolve;
@@ -183,7 +185,12 @@ export default function SecurityMazeGame() {
       }
     }
     loadPyodideRuntime();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      if (injectedScript && injectedScript.parentNode) {
+        injectedScript.parentNode.removeChild(injectedScript);
+      }
+    };
   }, [appendLog]);
 
   // Check if position is open
