@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  /* Elevated Slate-Navy Dark Theme (Lighter background & distinct card surfaces)
-     - Background: #161b22 (soft charcoal slate rather than pitch black)
-     - Panels: #21262d (elevated card surface with clean contrast)
-     - Panel Muted: #1c2128
-     - Panel Elevated: #2d333b
-     - Primary Accent: #71F6D0 (vibrant mint cyan)
-     - Secondary Accent: #1c3d37 (softened pine teal)
+  /* c-slate theme — sampled from the Workspace mock
+     - Background:  #161b22  slate charcoal
+     - Panel muted: #1c2128  nav / panels
+     - Panel:       #21262d  cards, walls
+     - Elevated:    #2d333b  hairlines, tracks
+     - Primary:     #71f6d0  mint
+     - Secondary:   #1c3d37  deep pine
+     - Syntax set:  yellow #e3b341, orange #ffa657, purple #d2a8ff, blue #79c0ff, red #ff7b72
   */
   --background: #161b22;
   --foreground: #f0f6fc;
@@ -16,18 +17,29 @@
   --panel: #21262d;
   --panel-muted: #1c2128;
   --panel-elevated: #2d333b;
+  --panel-deep: #0d1117;
   --panel-border: rgba(113, 246, 208, 0.18);
   --panel-border-hover: rgba(113, 246, 208, 0.45);
+  --line: #2d333b;
 
   /* Accents */
-  --accent-primary: #71F6D0;
+  --accent-primary: #71f6d0;
   --accent-primary-foreground: #0d1117;
   --accent-secondary: #1c3d37;
-  --accent-secondary-foreground: #71F6D0;
+  --accent-secondary-foreground: #71f6d0;
+
+  /* Syntax / status colors */
+  --slate-yellow: #e3b341;
+  --slate-orange: #ffa657;
+  --slate-purple: #d2a8ff;
+  --slate-blue: #79c0ff;
+  --slate-red: #ff7b72;
 
   /* Utility / Muted Tokens */
   --muted: #272d37;
   --muted-foreground: #9caab9;
+  --dim: #7d8a99;
+  --faint: #4b5563;
   --border: rgba(113, 246, 208, 0.15);
 }
 
@@ -37,17 +49,26 @@
   --color-panel: var(--panel);
   --color-panel-muted: var(--panel-muted);
   --color-panel-elevated: var(--panel-elevated);
+  --color-panel-deep: var(--panel-deep);
   --color-panel-border: var(--panel-border);
   --color-panel-border-hover: var(--panel-border-hover);
+  --color-line: var(--line);
   --color-accent-primary: var(--accent-primary);
   --color-accent-primary-foreground: var(--accent-primary-foreground);
   --color-accent-secondary: var(--accent-secondary);
   --color-accent-secondary-foreground: var(--accent-secondary-foreground);
+  --color-slate-yellow: var(--slate-yellow);
+  --color-slate-orange: var(--slate-orange);
+  --color-slate-purple: var(--slate-purple);
+  --color-slate-blue: var(--slate-blue);
+  --color-slate-red: var(--slate-red);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
   --color-border: var(--border);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-terminal-mono);
 }
 
 /* In a layer so Tailwind border-color utilities (border-accent-primary, etc.) can override it. */
@@ -64,6 +85,15 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-terminal-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   min-height: 100vh;
+}
+
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: cursor-blink 1.1s steps(1) infinite;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import TutorialOverlay, { TutorialStep } from "../components/TutorialOverlay";
 
 const TUTORIAL_STORAGE_KEY = "tutorial-level2-seen";
@@ -60,11 +61,11 @@ export const INITIAL_CAMERAS: Camera[] = [
   { id: 'cam3', x: 7, y: 3, direction: 'RIGHT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
 ];
 
-const STARTER_PYTHON_CODE = `# Write your maze navigation code here!
-# Available helper functions: move("UP"), move("DOWN"), move("LEFT"), move("RIGHT")
-# Collect all 3 items and reach the exit tile (2) without being spotted by cameras!
+const STARTER_PYTHON_CODE = `# Navigate the grid. Avoid camera sightlines.
+# Available: move("UP"), move("DOWN"),
+# move("LEFT"), move("RIGHT")
 
-print("Starting security maze navigation...")
+print("initiating route...")
 move("RIGHT")
 move("RIGHT")
 move("DOWN")
@@ -154,7 +155,8 @@ export default function SecurityMazeGame() {
     let injectedScript: HTMLScriptElement | null = null;
     async function loadPyodideRuntime() {
       try {
-        appendLog("Loading Python WebAssembly runtime...");
+        appendLog("loading python wasm runtime...");
+        appendLog("mounting maze environment [sector_02]");
         // Load pyodide script dynamically if not present
         if (!(window as any).loadPyodide) {
           const script = document.createElement("script");
@@ -175,7 +177,7 @@ export default function SecurityMazeGame() {
         if (isMounted) {
           pyodideRef.current = pyodideInstance;
           setPyodideStatus("ready");
-          appendLog("Python runtime ready successfully!");
+          appendLog("runtime ready. awaiting input");
         }
       } catch (err) {
         if (isMounted) {
@@ -361,207 +363,228 @@ export default function SecurityMazeGame() {
   // ==========================================
   // RENDER COMPONENT UI
   // ==========================================
+  const codeLines = code.split("\n").length;
+  const statusLabel =
+    pyodideStatus === "loading" ? "py.runtime loading" : pyodideStatus === "ready" ? "py.runtime ready" : "py.runtime error";
+  const statusColor =
+    pyodideStatus === "loading" ? "text-slate-yellow" : pyodideStatus === "ready" ? "text-accent-primary" : "text-slate-red";
+  const statusDot =
+    pyodideStatus === "loading" ? "bg-slate-yellow" : pyodideStatus === "ready" ? "bg-accent-primary" : "bg-slate-red";
+
   return (
     <>
-      <div className="flex min-h-screen w-full flex-col bg-zinc-950 p-4 text-zinc-100 md:p-8">
-        <header className="mb-6 flex flex-col justify-between gap-4 border-b border-zinc-800 pb-4 md:flex-row md:items-center">
+      <div className="w-full">
+        <Link href="/" className="text-xs text-dim transition hover:text-accent-primary">&lt; ../missions</Link>
+
+        <header className="mt-5 flex flex-col justify-between gap-5 border-b border-line pb-6 md:flex-row md:items-start">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-emerald-400">Security Maze Infiltration</h1>
-            <p className="text-sm text-zinc-400">Navigate past camera vision cones, collect all 3 items, and reach the exit!</p>
+            <div className="text-[13px] text-dim">
+              root@heistschool:~$ <span className="text-foreground">./run laser_grid_maze --level=02</span>
+            </div>
+            <h1 className="mb-3 mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-[38px]">Laser Grid Maze</h1>
+            <p className="text-[13px] text-muted-foreground">Navigate past surveillance, collect all 3 data shards, and reach the exit.</p>
           </div>
-          <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-300 border border-zinc-800">
-                        {pyodideStatus === "loading" && "Loading Python runtime..."}
-                      {pyodideStatus === "ready" && "🟢 Python Runtime Ready"}
-                      {pyodideStatus === "error" && "🔴 Python Runtime Error"}
-                    </span>
-            <button
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <div className="flex flex-wrap gap-2 text-xs">
+              <button
                 ref={runButtonRef}
                 onClick={runPythonCode}
                 disabled={pyodideStatus !== "ready" || running || won || caught}
-                className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {running ? "Running..." : "Run Code"}
-            </button>
-            <button
+                className="border border-accent-primary bg-accent-primary px-3.5 py-2 font-semibold text-accent-primary-foreground transition hover:brightness-110 disabled:opacity-50"
+              >
+                {running ? "[ running... ]" : "[ run_code ]"}
+              </button>
+              <button
                 onClick={resetGame}
-                className="rounded-full bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 border border-zinc-700"
-            >
-              Reset
-            </button>
-            <button
+                className="border border-line bg-panel-muted px-3.5 py-2 text-foreground transition hover:border-accent-primary/50 hover:text-accent-primary"
+              >
+                [ reset ]
+              </button>
+              <button
                 onClick={() => setTutorialActive(true)}
-                className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 border border-zinc-700"
                 title="Replay tutorial"
-            >
-              ? Help
-            </button>
+                className="border border-line bg-panel-muted px-3.5 py-2 text-foreground transition hover:border-accent-primary/50 hover:text-accent-primary"
+              >
+                [ help ]
+              </button>
+            </div>
+            <span className={`flex items-center gap-2 text-[11px] ${statusColor}`}>
+              <span className={`h-[7px] w-[7px] ${statusDot} ${pyodideStatus === "loading" ? "animate-pulse" : ""}`} />
+              {statusLabel}
+            </span>
           </div>
         </header>
 
-        <div className="grid flex-1 grid-gap-6 lg:grid-cols-12 gap-6">
+        <div className="mt-6 grid gap-5 lg:grid-cols-12">
           {/* Left Column: Code Editor & Console */}
           <div className="flex flex-col gap-4 lg:col-span-5">
-            <div ref={editorRef} className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl">
-              <label className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">Python Navigation Code</label>
-              <textarea
+            <div ref={editorRef} className="flex flex-col border border-line bg-panel-muted">
+              <div className="flex items-center justify-between border-b border-line px-4 py-3 text-[11px] tracking-wide">
+                <span className="text-foreground">PYTHON_NAVIGATION_CODE</span>
+                <span className="text-dim">main.py</span>
+              </div>
+              <div className="flex max-h-[340px] min-h-[240px] overflow-auto bg-background">
+                <div aria-hidden className="select-none py-4 pl-4 pr-3 text-right text-xs leading-6 text-faint">
+                  {Array.from({ length: Math.max(codeLines, 10) }, (_, i) => (
+                    <div key={i}>{i + 1}</div>
+                  ))}
+                </div>
+                <textarea
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  rows={12}
-                  className="font-mono w-full rounded-lg bg-zinc-950 p-3 text-sm text-zinc-200 border border-zinc-800 focus:border-emerald-500 focus:outline-none resize-none"
-                  placeholder="Type your python script here..."
-              />
-              <div className="mt-2 text-xs text-zinc-500">
-                Commands: <code className="text-emerald-400">move("UP")</code>, <code className="text-emerald-400">move("DOWN")</code>, <code className="text-emerald-400">move("LEFT")</code>, <code className="text-emerald-400">move("RIGHT")</code>
+                  spellCheck={false}
+                  rows={Math.max(codeLines, 10)}
+                  aria-label="Python navigation code"
+                  className="flex-1 resize-none overflow-hidden whitespace-pre bg-transparent py-4 pr-4 text-xs leading-6 text-foreground caret-accent-primary outline-none"
+                  placeholder="# type your python script here..."
+                />
+              </div>
+              <div className="border-t border-line px-4 py-2.5 text-[10px] text-dim">
+                apis: <span className="text-accent-primary">move(direction)</span> · <span className="text-accent-primary">print(value)</span>
               </div>
             </div>
 
-            <div ref={consoleRef} className="flex flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl min-h-[160px]">
-              <span className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">System Console / Logs</span>
-              <div ref={logContainerRef} className="flex-1 overflow-y-auto font-mono text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-lg border border-zinc-800 max-h-[180px]">
-                {logs.length === 0 && <span className="text-zinc-600">No logs yet...</span>}
+            <div ref={consoleRef} className="flex flex-1 flex-col border border-line bg-panel-muted">
+              <div className="flex items-center justify-between border-b border-line px-4 py-3 text-[11px] tracking-wide">
+                <span className="text-foreground">SYSTEM_CONSOLE</span>
+                <span className="text-dim">stdout</span>
+              </div>
+              <div
+                ref={logContainerRef}
+                className="max-h-[200px] min-h-[140px] flex-1 space-y-1 overflow-y-auto bg-background p-4 text-[11px] leading-5 text-muted-foreground"
+              >
+                {logs.length === 0 && <span className="text-faint">&gt; no output yet</span>}
                 {logs.map((log, idx) => (
-                    <div key={idx}>{log}</div>
+                  <div key={idx} className={logColor(log)}>&gt; {log}</div>
                 ))}
               </div>
             </div>
           </div>
 
           {/* Right Column: Maze Board & Status */}
-          <div className="flex flex-col items-center justify-start lg:col-span-7 gap-4">
-            <div className="flex w-full max-w-lg items-center justify-between rounded-xl bg-zinc-900/50 border border-zinc-800 px-6 py-3 shadow-md">
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase text-zinc-400 font-bold">Moves:</span>
-                <span className="text-lg font-mono font-bold text-emerald-400">{moves}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase text-zinc-400 font-bold">Items:</span>
-                <span className="text-lg font-mono font-bold text-amber-400">{collectedCount} / 3</span>
-              </div>
+          <div className="flex flex-col gap-3 lg:col-span-7">
+            <div className="flex items-center justify-between border border-line bg-panel-muted px-4 py-3 text-[11px] text-dim">
+              <span>MOVES: <b className="ml-1 text-[13px] text-accent-primary">{moves}</b></span>
+              <span>ITEMS: <b className="ml-1 text-[13px] text-accent-primary">{collectedCount}/{items.length}</b></span>
             </div>
 
             {/* Maze Grid Display */}
-            <div ref={mazeRef} className="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl overflow-x-auto">
+            <div ref={mazeRef} className="overflow-x-auto border border-line bg-panel-deep p-3">
               <div
-                  className="grid gap-1"
-                  style={{ gridTemplateColumns: `repeat(${grid[0].length}, minmax(0, 1fr))` }}
+                className="grid min-w-[420px] gap-[3px]"
+                style={{ gridTemplateColumns: `repeat(${grid[0].length}, minmax(0, 1fr))` }}
               >
                 {grid.map((row, y) =>
-                    row.map((cellType, x) => {
-                      const isPlayerHere = player.x === x && player.y === y;
-                      const cameraHere = cameras.find(c => c.x === x && c.y === y);
-                      const itemHere = items.find(i => !i.collected && i.x === x && i.y === y);
-                      const isVision = visionCells.has(`${x},${y}`);
+                  row.map((cellType, x) => {
+                    const isPlayerHere = player.x === x && player.y === y;
+                    const cameraHere = cameras.find(c => c.x === x && c.y === y);
+                    const itemHere = items.find(i => !i.collected && i.x === x && i.y === y);
+                    const isVision = visionCells.has(`${x},${y}`);
 
-                      let bgClass = "bg-zinc-800/80"; // Wall
-                      if (cellType === 1) bgClass = "bg-zinc-900/90"; // Open path
-                      if (cellType === 2) bgClass = "bg-emerald-950/60 border border-emerald-500/40"; // Exit
+                    let cls = "border border-panel-elevated bg-panel"; // Wall
+                    let content: React.ReactNode = null;
 
-                      if (isVision && cellType !== 0) {
-                        bgClass = "bg-red-950/40 border border-red-500/30"; // Camera vision cone
-                      }
+                    if (cellType === 1) cls = "bg-background"; // Open path
+                    if (isVision && cellType !== 0) cls = "bg-slate-red/20"; // Camera vision cone
+                    if (cellType === 2) {
+                      cls = "border border-accent-primary bg-accent-secondary text-accent-primary";
+                      content = "EXIT";
+                    }
+                    if (itemHere) {
+                      cls = "bg-slate-yellow text-accent-primary-foreground";
+                      content = "?";
+                    }
+                    if (cameraHere) {
+                      cls = "bg-slate-red text-accent-primary-foreground";
+                      content = CAMERA_ARROW[cameraHere.direction];
+                    }
+                    if (isPlayerHere) {
+                      cls = caught
+                        ? "bg-slate-red text-accent-primary-foreground ring-2 ring-slate-red/60"
+                        : "bg-accent-primary text-accent-primary-foreground shadow-[0_0_12px_rgba(113,246,208,0.55)]";
+                      content = "P";
+                    }
 
-                      return (
-                          <div
-                              key={`${x}-${y}`}
-                              className={`relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg transition-all ${bgClass}`}
-                          >
-                            {/* Cell Type Marker */}
-                            {cellType === 2 && !isPlayerHere && (
-                                <span className="text-xs font-bold text-emerald-400">EXIT</span>
-                            )}
-
-                            {/* Item Sprite */}
-                            {itemHere && (
-                                <img
-                                    src={itemHere.sprite}
-                                    alt="Item"
-                                    className="h-6 w-6 object-contain animate-bounce"
-                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                                />
-                            )}
-
-                            {/* Camera Sprite */}
-                            {cameraHere && (
-                                <div className="relative flex items-center justify-center">
-                                  <img
-                                      src={cameraHere.sprite}
-                                      alt="Camera"
-                                      className="h-7 w-7 object-contain drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-                                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                                  />
-                                  <span className="absolute -bottom-2 text-[9px] font-mono font-bold text-red-400 uppercase">
-                                                        {cameraHere.direction[0]}
-                                                    </span>
-                                </div>
-                            )}
-
-                            {/* Player Character */}
-                            {isPlayerHere && (
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-zinc-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.9)] z-10 animate-pulse">
-                                  🕵️‍♂️
-                                </div>
-                            )}
-                          </div>
-                      );
-                    })
+                    return (
+                      <div
+                        key={`${x}-${y}`}
+                        className={`flex aspect-square items-center justify-center text-[9px] font-bold transition-colors sm:text-[10px] ${cls}`}
+                        title={cameraHere ? `camera facing ${cameraHere.direction.toLowerCase()}` : undefined}
+                      >
+                        {content}
+                      </div>
+                    );
+                  })
                 )}
+              </div>
+              <div className="mt-2 text-right text-[10px] text-faint">
+                grid:// sector_02 · x:{String(player.x).padStart(2, "0")} y:{String(player.y).padStart(2, "0")}
               </div>
             </div>
 
             {/* Status Banners */}
             {caught && (
-                <div className="w-full max-w-lg rounded-xl bg-red-950/80 border border-red-600 p-4 text-center text-red-200 shadow-xl animate-shake">
-                  <h3 className="text-lg font-bold">🚨 CAUGHT BY SECURITY CAMERA! 🚨</h3>
-                  <p className="text-sm mt-1">Avoid camera vision cones or time your movements carefully.</p>
-                  <button onClick={resetGame} className="mt-3 rounded-full bg-red-600 px-6 py-1.5 text-sm font-semibold text-white hover:bg-red-500">
-                    Try Again
-                  </button>
-                </div>
+              <div className="border border-slate-red/60 bg-slate-red/10 p-4 text-center">
+                <h3 className="text-sm font-bold tracking-wider text-slate-red">!! ALARM_TRIGGERED — CAUGHT ON CAMERA</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Avoid the red sightlines or time your route around them.</p>
+                <button onClick={resetGame} className="mt-3 bg-slate-red px-4 py-1.5 text-xs font-semibold text-accent-primary-foreground hover:brightness-110">
+                  [ try_again ]
+                </button>
+              </div>
             )}
 
             {won && (
-                <div className="w-full max-w-lg rounded-xl bg-emerald-950/80 border border-emerald-500 p-4 text-center text-emerald-200 shadow-xl">
-                  <h3 className="text-lg font-bold">🎉 MISSION ACCOMPLISHED! 🎉</h3>
-                  <p className="text-sm mt-1">Successfully collected all items and escaped in {moves} moves!</p>
-                  <button onClick={resetGame} className="mt-3 rounded-full bg-emerald-600 px-6 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500">
-                    Play Again
-                  </button>
-                </div>
+              <div className="border border-accent-primary/60 bg-accent-secondary/40 p-4 text-center">
+                <h3 className="text-sm font-bold tracking-wider text-accent-primary">MISSION_COMPLETE</h3>
+                <p className="mt-1 text-xs text-muted-foreground">All shards collected — exfiltrated in {moves} moves.</p>
+                <button onClick={resetGame} className="mt-3 bg-accent-primary px-4 py-1.5 text-xs font-semibold text-accent-primary-foreground hover:brightness-110">
+                  [ play_again ]
+                </button>
+              </div>
             )}
 
-            <div className="text-xs text-zinc-500 text-center">
-              Tip: Use WASD or Arrow Keys for manual movement, or test your custom Python algorithms!
+            <div className="text-center text-[10px] text-faint">
+              manual input: WASD / arrow keys · avoid red camera sightlines
             </div>
           </div>
         </div>
 
         {/* Available APIs Reference */}
-        <div ref={apiRef} className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-xl">
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-emerald-400">Available APIs</h2>
-          <p className="mb-4 text-xs text-zinc-500">Functions your Python code can call in this level.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-              <code className="text-sm font-mono font-semibold text-emerald-400">move(direction: str)</code>
-              <p className="mt-1 text-xs text-zinc-400">
-                Moves the player one tile. <code className="text-zinc-300">direction</code> is one of{" "}
-                <code className="text-zinc-300">"UP"</code>, <code className="text-zinc-300">"DOWN"</code>,{" "}
-                <code className="text-zinc-300">"LEFT"</code>, <code className="text-zinc-300">"RIGHT"</code>.
-                Blocked by walls, collects items automatically, and triggers the alarm if a camera sees the tile.
+        <div ref={apiRef} className="mt-6 border border-line bg-panel-muted">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3 text-[11px] tracking-wide">
+            <span className="text-foreground">AVAILABLE_APIS</span>
+            <span className="text-dim">2 functions</span>
+          </div>
+          <div className="grid gap-3 p-3 sm:grid-cols-2">
+            <div className="border border-line bg-background p-3.5">
+              <code className="text-xs font-semibold text-accent-primary">move(direction: str)</code>
+              <p className="mt-1.5 text-[11px] leading-5 text-dim">
+                Moves one tile. Valid: <span className="text-slate-yellow">&quot;UP&quot;</span>, <span className="text-slate-yellow">&quot;DOWN&quot;</span>,{" "}
+                <span className="text-slate-yellow">&quot;LEFT&quot;</span>, <span className="text-slate-yellow">&quot;RIGHT&quot;</span>. Blocked by walls;
+                collects items automatically; triggers the alarm if a camera sees the tile.
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-              <code className="text-sm font-mono font-semibold text-emerald-400">print(value)</code>
-              <p className="mt-1 text-xs text-zinc-400">
-                Standard Python <code className="text-zinc-300">print()</code>. Output is captured and shown in the
-                System Console after your script finishes running.
+            <div className="border border-line bg-background p-3.5">
+              <code className="text-xs font-semibold text-accent-primary">print(value)</code>
+              <p className="mt-1.5 text-[11px] leading-5 text-dim">
+                Outputs any value to SYSTEM_CONSOLE after your script finishes running.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} />
+      <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} mascot />
     </>
   );
+}
+
+const CAMERA_ARROW: Record<Direction, string> = { UP: "▲", DOWN: "▼", LEFT: "◀", RIGHT: "▶" };
+
+function logColor(log: string) {
+  if (/alarm|error|failed/i.test(log)) return "text-slate-red";
+  if (/collision/i.test(log)) return "text-slate-orange";
+  if (/success|ready|collected/i.test(log)) return "text-accent-primary";
+  if (/^---/.test(log)) return "text-dim";
+  return "";
 }
