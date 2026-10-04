@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useLayoutEffect } from "react";
+import SpeakingMascot from "@/app/components/mascot/SpeakingMascot";
 
 export interface TutorialStep {
   target: React.RefObject<HTMLElement | null>;
@@ -13,6 +14,8 @@ interface TutorialOverlayProps {
   steps: TutorialStep[];
   active: boolean;
   onFinish: () => void;
+  /** Have Lil the mascot "speak" each step instead of a plain tooltip. */
+  mascot?: boolean;
 }
 
 interface Rect {
@@ -23,8 +26,10 @@ interface Rect {
 }
 
 const PADDING = 8;
+const PLAIN_WIDTH = 320;
+const MASCOT_WIDTH = 440;
 
-export default function TutorialOverlay({ steps, active, onFinish }: TutorialOverlayProps) {
+export default function TutorialOverlay({ steps, active, onFinish, mascot = false }: TutorialOverlayProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
 
@@ -79,6 +84,7 @@ export default function TutorialOverlay({ steps, active, onFinish }: TutorialOve
   const skip = () => onFinish();
 
   const placement = step.placement ?? "bottom";
+  const tooltipWidth = mascot ? MASCOT_WIDTH : PLAIN_WIDTH;
   const tooltipStyle: React.CSSProperties = {};
   if (rect) {
     if (placement === "bottom") {
@@ -89,12 +95,53 @@ export default function TutorialOverlay({ steps, active, onFinish }: TutorialOve
       tooltipStyle.left = Math.max(16, rect.left);
     } else if (placement === "left") {
       tooltipStyle.top = rect.top;
-      tooltipStyle.left = Math.max(16, rect.left - 340);
+      tooltipStyle.left = Math.max(16, rect.left - tooltipWidth - 20);
     } else {
       tooltipStyle.top = rect.top;
       tooltipStyle.left = rect.left + rect.width + 12;
     }
+    // Keep the tooltip on-screen horizontally.
+    if (typeof window !== "undefined" && typeof tooltipStyle.left === "number") {
+      tooltipStyle.left = Math.max(16, Math.min(tooltipStyle.left, window.innerWidth - tooltipWidth - 16));
+    }
   }
+
+  const stepLabel = (
+    <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+      Step {stepIndex + 1} of {steps.length}
+    </div>
+  );
+
+  const controls = (
+    <div className="flex items-center justify-between">
+      <button
+        onClick={skip}
+        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+      >
+        Skip tutorial
+      </button>
+      <div className="flex items-center gap-2">
+        {stepIndex > 0 && (
+          <button
+            onClick={back}
+            className="rounded-full bg-zinc-800 px-4 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 border border-zinc-700"
+          >
+            Back
+          </button>
+        )}
+        <button
+          onClick={next}
+          className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+        >
+          {isLast ? "Done" : "Next"}
+        </button>
+      </div>
+    </div>
+  );
+
+  const positionStyle: React.CSSProperties = rect
+    ? tooltipStyle
+    : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
 
   return (
     <div className="fixed inset-0 z-[100]">
@@ -127,40 +174,29 @@ export default function TutorialOverlay({ steps, active, onFinish }: TutorialOve
       )}
 
       {/* Tooltip */}
-      <div
-        className="absolute w-[320px] rounded-xl border border-emerald-500/40 bg-zinc-900 p-4 shadow-2xl"
-        style={rect ? tooltipStyle : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
-      >
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-          Step {stepIndex + 1} of {steps.length}
-        </div>
-        <h3 className="mb-2 text-base font-bold text-zinc-100">{step.title}</h3>
-        <p className="mb-4 text-sm text-zinc-300">{step.body}</p>
-        <div className="flex items-center justify-between">
-          <button
-            onClick={skip}
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+      {mascot ? (
+        <div className="absolute" style={{ ...positionStyle, width: tooltipWidth }}>
+          <SpeakingMascot
+            header={stepLabel}
+            title={step.title}
+            text={step.body}
+            size={88}
+            className="drop-shadow-2xl"
           >
-            Skip tutorial
-          </button>
-          <div className="flex items-center gap-2">
-            {stepIndex > 0 && (
-              <button
-                onClick={back}
-                className="rounded-full bg-zinc-800 px-4 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 border border-zinc-700"
-              >
-                Back
-              </button>
-            )}
-            <button
-              onClick={next}
-              className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
-            >
-              {isLast ? "Done" : "Next"}
-            </button>
-          </div>
+            {controls}
+          </SpeakingMascot>
         </div>
-      </div>
+      ) : (
+        <div
+          className="absolute rounded-xl border border-emerald-500/40 bg-zinc-900 p-4 shadow-2xl"
+          style={{ ...positionStyle, width: tooltipWidth }}
+        >
+          {stepLabel}
+          <h3 className="mb-2 text-base font-bold text-zinc-100">{step.title}</h3>
+          <p className="mb-4 text-sm text-zinc-300">{step.body}</p>
+          {controls}
+        </div>
+      )}
     </div>
   );
 }

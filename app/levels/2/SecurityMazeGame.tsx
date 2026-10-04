@@ -561,7 +561,7 @@ export default function SecurityMazeGame() {
         </div>
       </div>
 
-      <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} />
+      <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} mascot />
     </>
   );
 }
