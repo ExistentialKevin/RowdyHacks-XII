@@ -87,6 +87,13 @@ export default function SecurityMazeGame() {
   const logContainerRef = useRef<HTMLDivElement>(null);
   const moveQueueRef = useRef<string[]>([]);
 
+  // Refs to prevent stale closure issues during asynchronous movement loops
+  const playerRef = useRef<Pos>(START);
+  const itemsRef = useRef<Item[]>(INITIAL_ITEMS);
+
+  useEffect(() => { playerRef.current = player; }, [player]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
+
   // Append log helper
   const appendLog = useCallback((msg: string) => {
     setLogs(prev => [...prev, msg]);
@@ -175,8 +182,12 @@ export default function SecurityMazeGame() {
 
   // Helper reset function
   const resetMazeState = useCallback(() => {
-    setPlayer(START);
-    setItems(JSON.parse(JSON.stringify(INITIAL_ITEMS)));
+    const initialPos = START;
+    const initialItemsCopy = JSON.parse(JSON.stringify(INITIAL_ITEMS));
+    setPlayer(initialPos);
+    playerRef.current = initialPos;
+    setItems(initialItemsCopy);
+    itemsRef.current = initialItemsCopy;
     setCameras(INITIAL_CAMERAS);
     setMoves(0);
     setWon(false);
@@ -185,15 +196,14 @@ export default function SecurityMazeGame() {
     moveQueueRef.current = [];
   }, []);
 
-  // Execute a single step movement from the queue cleanly
+  // Execute a single step movement using current refs to guarantee absolute positioning accuracy
   const processNextMove = useCallback(() => {
     if (moveQueueRef.current.length === 0) {
       setRunning(false);
       appendLog("--- Execution Completed ---");
 
-      // Check if finished executing but not on exit grid or didn't win
-      const allCollected = items.every(i => i.collected);
-      const atExit = grid[player.y]?.[player.x] === 2;
+      const allCollected = itemsRef.current.every(i => i.collected);
+      const atExit = grid[playerRef.current.y]?.[playerRef.current.x] === 2;
       if (!atExit || !allCollected) {
         setFailedIncomplete(true);
         appendLog("Finished code execution, but you did not reach the exit with all items!");
@@ -211,8 +221,9 @@ export default function SecurityMazeGame() {
     else if (dir === 'LEFT') dx = -1;
     else if (dir === 'RIGHT') dx = 1;
 
-    const nextX = player.x + dx;
-    const nextY = player.y + dy;
+    const currentPos = playerRef.current;
+    const nextX = currentPos.x + dx;
+    const nextY = currentPos.y + dy;
 
     // 1. Wall Collision Check
     if (!isOpen(nextX, nextY)) {
@@ -223,8 +234,9 @@ export default function SecurityMazeGame() {
     }
 
     const nextPos = { x: nextX, y: nextY };
-    setMoves(m => m + 1);
+    playerRef.current = nextPos;
     setPlayer(nextPos);
+    setMoves(m => m + 1);
 
     // 2. Camera Detection Check
     if (checkCameraDetection(nextPos, cameras)) {
@@ -237,25 +249,22 @@ export default function SecurityMazeGame() {
 
     // 3. Item Collection Check
     let itemCollectedThisStep = false;
-    setItems(prevItems =>
-        prevItems.map(item => {
-          if (!item.collected && item.x === nextX && item.y === nextY) {
-            itemCollectedThisStep = true;
-            return { ...item, collected: true };
-          }
-          return item;
-        })
-    );
+    const updatedItems = itemsRef.current.map(item => {
+      if (!item.collected && item.x === nextX && item.y === nextY) {
+        itemCollectedThisStep = true;
+        return { ...item, collected: true };
+      }
+      return item;
+    });
+
     if (itemCollectedThisStep) {
+      itemsRef.current = updatedItems;
+      setItems(updatedItems);
       appendLog(`Collected Item!`);
     }
 
     // 4. Win Condition Check
-    const updatedItemsState = items.map(item =>
-        (item.x === nextX && item.y === nextY) ? { ...item, collected: true } : item
-    );
-    const allItemsCollected = updatedItemsState.every(i => i.collected);
-
+    const allItemsCollected = updatedItems.every(i => i.collected);
     if (grid[nextY]?.[nextX] === 2) {
       if (allItemsCollected) {
         setWon(true);
@@ -272,14 +281,13 @@ export default function SecurityMazeGame() {
     setTimeout(() => {
       processNextMove();
     }, 300);
-  }, [player, items, cameras, won, caught, appendLog]);
+  }, [cameras, appendLog, checkCameraDetection]);
 
   // Run Python Code
   const runPythonCode = async () => {
     if (!pyodideRef.current || running) return;
 
-    // If player is not currently on the exit grid, auto-reset the maze
-    const currentCell = grid[player.y]?.[player.x];
+    const currentCell = grid[playerRef.current.y]?.[playerRef.current.x];
     if (currentCell !== 2 || !won) {
       resetMazeState();
       appendLog("Maze automatically reset for new run.");
@@ -291,7 +299,6 @@ export default function SecurityMazeGame() {
     appendLog("--- Executing Python Code ---");
 
     try {
-      // Expose python move helper function to queue moves
       pyodideRef.current.globals.set("move", (direction: string) => {
         moveQueueRef.current.push(direction);
       });
@@ -312,7 +319,6 @@ export default function SecurityMazeGame() {
         appendLog(stdout.trim());
       }
 
-      // Start stepping through the queued moves smoothly
       processNextMove();
     } catch (err: any) {
       appendLog(`Error: ${err.message}`);
@@ -473,7 +479,7 @@ export default function SecurityMazeGame() {
 
             {failedIncomplete && !won && !caught && (
                 <div className="w-full max-w-lg rounded-xl bg-amber-950/80 border border-amber-600 p-4 text-center text-amber-200 shadow-xl">
-                  <h3 className="text-lg font-bold">⚠️️ MAZE INCOMPLETE ⚠️</h3>
+                  <h3 className="text-lg font-bold">⚠ MAZE INCOMPLETE ⚠️</h3>
                   <p className="text-sm mt-1">You ran out of movements before reaching the exit tile with all 3 items! Modify your code and try again.</p>
                 </div>
             )}
