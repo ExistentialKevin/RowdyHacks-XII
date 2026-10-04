@@ -7,7 +7,7 @@ interface MiddleColumnProps {
 
 export default function MiddleColumn({ levels }: MiddleColumnProps) {
   return (
-    <section className="space-y-6 lg:col-span-6">
+    <section className="space-y-6 w-full">
       {/* Hero / Sector Briefing Banner */}
       <div className="relative overflow-hidden rounded-3xl border border-panel-border bg-gradient-to-br from-panel via-panel-muted to-panel p-6 sm:p-8 shadow-2xl">
         <div className="pointer-events-none absolute -right-10 -bottom-10 h-48 w-48 rounded-full bg-accent-primary/10 blur-3xl" />
