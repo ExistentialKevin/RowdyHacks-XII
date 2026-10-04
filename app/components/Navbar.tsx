@@ -1,49 +1,53 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const LINKS = [
+  { href: "/", label: "operations", match: (p: string) => p === "/" },
+  { href: "/levels/2", label: "play_maze", match: (p: string) => p.startsWith("/levels") },
+];
 
 export default function Navbar() {
+  const pathname = usePathname() ?? "/";
+
   return (
-    <header className="sticky top-0 z-50 border-b border-panel-border bg-panel/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-line bg-panel-muted/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-secondary border border-panel-border shadow-lg shadow-accent-primary/10">
-            <span className="font-mono text-lg font-black text-accent-primary">🔒</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-base font-bold tracking-tight text-foreground">
-                HEIST<span className="text-accent-primary">SCHOOL</span>
-              </span>
-              <span className="rounded bg-accent-secondary/60 border border-panel-border px-1.5 py-0.5 text-[10px] font-mono font-medium text-accent-primary">
-                v0.1
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground">RowdyHacks Infiltration Academy</p>
-          </div>
-        </div>
+        <Link href="/" className="flex items-center gap-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-primary" aria-hidden>
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+          <span className="hidden text-sm font-bold tracking-[0.14em] text-foreground min-[420px]:inline">HEISTSCHOOL</span>
+          <span className="hidden text-[11px] text-dim sm:inline">v0.1 // rowdyhacks</span>
+        </Link>
 
         {/* Nav links */}
-        <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-muted-foreground">
-          <Link
-            href="/"
-            className="rounded-lg bg-panel-elevated border border-panel-border px-3.5 py-2 text-foreground font-semibold transition hover:border-accent-primary/30"
-          >
-            Operations
-          </Link>
-          <Link
-            href="/game/1"
-            className="rounded-lg px-3.5 py-2 hover:bg-panel-elevated hover:text-accent-primary transition"
-          >
-            Play Maze
-          </Link>
+        <nav className="flex items-center gap-1 text-[11px] sm:text-[13px]">
+          {LINKS.map((l) => {
+            const active = l.match(pathname);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={
+                  active
+                    ? "whitespace-nowrap bg-accent-primary px-2 py-1.5 font-medium text-accent-primary-foreground sm:px-3.5"
+                    : "whitespace-nowrap px-2 py-1.5 text-muted-foreground transition hover:text-accent-primary sm:px-3.5"
+                }
+              >
+                [ {l.label} ]
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right utility buttons */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 rounded-full border border-panel-border bg-accent-secondary/40 px-3 py-1 text-xs font-mono text-accent-primary">
-            <span className="h-2 w-2 rounded-full bg-accent-primary animate-pulse" />
-            SYSTEM ONLINE
-          </div>
+        {/* Status */}
+        <div className="hidden items-center gap-2 text-xs text-accent-primary sm:flex">
+          <span className="h-[7px] w-[7px] bg-accent-primary" />
+          sys.online
         </div>
       </div>
     </header>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -7,8 +7,8 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const terminalMono = JetBrains_Mono({
+  variable: "--font-terminal-mono",
   subsets: ["latin"],
 });
 
@@ -22,11 +22,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-theme="dark"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${terminalMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body
-        className="min-h-full flex flex-col bg-background text-foreground selection:bg-accent-primary/25 selection:text-accent-primary"
+        className="min-h-full flex flex-col bg-background font-mono text-foreground selection:bg-accent-primary/25 selection:text-accent-primary"
         suppressHydrationWarning
       >
         {children}

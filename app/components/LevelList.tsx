@@ -120,7 +120,7 @@ export default function LevelList({ levels = initialLevels }: LevelListProps) {
               total={lvl.total}
               difficulty={lvl.difficulty}
               category={lvl.category}
-              href={lvl.href}
+              href={lvl.href ?? "#"}
             />
           </div>
         ))}
