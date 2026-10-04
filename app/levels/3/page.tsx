@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Navbar from "../../components/Navbar";
 import VaultPuzzle from "./VaultPuzzle";
+import SecurityMazeGame from "@/app/levels/2/SecurityMazeGame";
 
 export const metadata: Metadata = {
   title: "Level 3 — Terminal Access",
@@ -9,8 +11,11 @@ export const metadata: Metadata = {
 
 export default function GamePage() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
-      <VaultPuzzle />
-    </div>
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <Navbar />
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:py-10">
+          <VaultPuzzle />
+        </main>
+      </div>
   );
 }
