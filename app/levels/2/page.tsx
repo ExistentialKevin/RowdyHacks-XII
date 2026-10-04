@@ -3,7 +3,7 @@ import Navbar from "../../components/Navbar";
 import SecurityMazeGame from "./SecurityMazeGame";
 
 export const metadata: Metadata = {
-  title: "Laser Grid Maze · Heist School",
+  title: "The Camera Gauntlet · Heist School",
   description: "Guide the player through the maze to the exit.",
 };
 

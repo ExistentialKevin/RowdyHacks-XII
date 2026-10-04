@@ -5,7 +5,12 @@ import Link from "next/link";
 import TutorialOverlay, { TutorialStep } from "../components/TutorialOverlay";
 // Board theme + player character live in ./boards — see boards/index.ts (theme switch)
 // and boards/PlayerAvatar.tsx (character model).
-import { BOARD_THEME, BOARD_THEMES, SHOW_THEME_PICKER, type BoardTheme } from "./boards";
+import {
+  BOARD_THEME,
+  BOARD_THEMES,
+  SHOW_THEME_PICKER,
+  type BoardTheme,
+} from "./boards";
 import HintMascot from "../components/HintMascot";
 
 const TUTORIAL_STORAGE_KEY = "tutorial-level2-seen";
@@ -15,7 +20,7 @@ const TUTORIAL_STORAGE_KEY = "tutorial-level2-seen";
 // ==========================================
 export type Cell = 0 | 1 | 2;
 export type Pos = { x: number; y: number };
-export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
 export interface Camera {
   id: string;
@@ -54,15 +59,54 @@ export const grid: Cell[][] = [
 export const START: Pos = { x: 1, y: 1 };
 
 export const INITIAL_ITEMS: Item[] = [
-  { id: 1, x: 5, y: 1, collected: false, sprite: 'https://placehold.co/32x32/f59e0b/ffffff?text=💎' },
-  { id: 2, x: 7, y: 7, collected: false, sprite: 'https://placehold.co/32x32/f59e0b/ffffff?text=💎' },
-  { id: 3, x: 1, y: 9, collected: false, sprite: 'https://placehold.co/32x32/f59e0b/ffffff?text=💎' },
+  {
+    id: 1,
+    x: 5,
+    y: 1,
+    collected: false,
+    sprite: "https://placehold.co/32x32/f59e0b/ffffff?text=💎",
+  },
+  {
+    id: 2,
+    x: 7,
+    y: 7,
+    collected: false,
+    sprite: "https://placehold.co/32x32/f59e0b/ffffff?text=💎",
+  },
+  {
+    id: 3,
+    x: 1,
+    y: 9,
+    collected: false,
+    sprite: "https://placehold.co/32x32/f59e0b/ffffff?text=💎",
+  },
 ];
 
 export const INITIAL_CAMERAS: Camera[] = [
-  { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
-  { id: 'cam2', x: 9, y: 5, direction: 'LEFT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
-  { id: 'cam3', x: 7, y: 3, direction: 'RIGHT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
+  {
+    id: "cam1",
+    x: 3,
+    y: 1,
+    direction: "DOWN",
+    range: 3,
+    sprite: "https://placehold.co/32x32/ef4444/ffffff?text=📷",
+  },
+  {
+    id: "cam2",
+    x: 9,
+    y: 5,
+    direction: "LEFT",
+    range: 3,
+    sprite: "https://placehold.co/32x32/ef4444/ffffff?text=📷",
+  },
+  {
+    id: "cam3",
+    x: 7,
+    y: 3,
+    direction: "RIGHT",
+    range: 3,
+    sprite: "https://placehold.co/32x32/ef4444/ffffff?text=📷",
+  },
 ];
 
 // Lil's hints, in order. He says "psst** try <hint>" and gives up after these.
@@ -88,14 +132,18 @@ move("DOWN")
 export default function SecurityMazeGame() {
   const [code, setCode] = useState(STARTER_PYTHON_CODE);
   const [player, setPlayer] = useState<Pos>(START);
-  const [items, setItems] = useState<Item[]>(JSON.parse(JSON.stringify(INITIAL_ITEMS)));
+  const [items, setItems] = useState<Item[]>(
+    JSON.parse(JSON.stringify(INITIAL_ITEMS)),
+  );
   const [cameras, setCameras] = useState<Camera[]>(INITIAL_CAMERAS);
   const [moves, setMoves] = useState(0);
   const [won, setWon] = useState(false);
   const [caught, setCaught] = useState(false);
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
-  const [pyodideStatus, setPyodideStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [pyodideStatus, setPyodideStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
 
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(BOARD_THEME);
 
@@ -125,7 +173,7 @@ export default function SecurityMazeGame() {
     {
       target: editorRef,
       title: "Write your navigation code",
-      body: "This is your Python editor. Call move(\"UP\"/\"DOWN\"/\"LEFT\"/\"RIGHT\") to plan a path through the maze before running it.",
+      body: 'This is your Python editor. Call move("UP"/"DOWN"/"LEFT"/"RIGHT") to plan a path through the maze before running it.',
       placement: "right",
     },
     {
@@ -137,7 +185,7 @@ export default function SecurityMazeGame() {
     {
       target: consoleRef,
       title: "Watch the console",
-      body: "Collisions, item pickups, and alarms are all logged here, along with anything your script prints.",
+      body: "Collisions, diamond pickups, and alarms are all logged here, along with anything your script prints.",
       placement: "right",
     },
     {
@@ -156,7 +204,7 @@ export default function SecurityMazeGame() {
 
   // Append log helper
   const appendLog = useCallback((msg: string) => {
-    setLogs(prev => [...prev, msg]);
+    setLogs((prev) => [...prev, msg]);
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
@@ -173,7 +221,8 @@ export default function SecurityMazeGame() {
         // Load pyodide script dynamically if not present
         if (!(window as any).loadPyodide) {
           const script = document.createElement("script");
-          script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
+          script.src =
+            "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
           script.async = true;
           injectedScript = script;
           document.body.appendChild(script);
@@ -184,7 +233,7 @@ export default function SecurityMazeGame() {
         }
 
         const pyodideInstance = await (window as any).loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/",
         });
 
         if (isMounted) {
@@ -217,9 +266,10 @@ export default function SecurityMazeGame() {
   // Calculate all cells illuminated by camera vision cones
   const getCameraVisionCells = useCallback(() => {
     const visionSet = new Set<string>();
-    cameras.forEach(cam => {
-      const dx = cam.direction === 'RIGHT' ? 1 : cam.direction === 'LEFT' ? -1 : 0;
-      const dy = cam.direction === 'DOWN' ? 1 : cam.direction === 'UP' ? -1 : 0;
+    cameras.forEach((cam) => {
+      const dx =
+        cam.direction === "RIGHT" ? 1 : cam.direction === "LEFT" ? -1 : 0;
+      const dy = cam.direction === "DOWN" ? 1 : cam.direction === "UP" ? -1 : 0;
 
       for (let i = 1; i <= cam.range; i++) {
         const cx = cam.x + dx * i;
@@ -233,22 +283,27 @@ export default function SecurityMazeGame() {
   }, [cameras]);
 
   // Check if player is caught in camera sight
-  const checkCameraDetection = useCallback((currPlayer: Pos, currentCameras: Camera[]) => {
-    for (const cam of currentCameras) {
-      const dx = cam.direction === 'RIGHT' ? 1 : cam.direction === 'LEFT' ? -1 : 0;
-      const dy = cam.direction === 'DOWN' ? 1 : cam.direction === 'UP' ? -1 : 0;
+  const checkCameraDetection = useCallback(
+    (currPlayer: Pos, currentCameras: Camera[]) => {
+      for (const cam of currentCameras) {
+        const dx =
+          cam.direction === "RIGHT" ? 1 : cam.direction === "LEFT" ? -1 : 0;
+        const dy =
+          cam.direction === "DOWN" ? 1 : cam.direction === "UP" ? -1 : 0;
 
-      for (let i = 1; i <= cam.range; i++) {
-        const cx = cam.x + dx * i;
-        const cy = cam.y + dy * i;
-        if (grid[cy]?.[cx] === 0) break;
-        if (cx === currPlayer.x && cy === currPlayer.y) {
-          return true;
+        for (let i = 1; i <= cam.range; i++) {
+          const cx = cam.x + dx * i;
+          const cy = cam.y + dy * i;
+          if (grid[cy]?.[cx] === 0) break;
+          if (cx === currPlayer.x && cy === currPlayer.y) {
+            return true;
+          }
         }
       }
-    }
-    return false;
-  }, []);
+      return false;
+    },
+    [],
+  );
 
   // Reset game state
   const resetGame = useCallback(() => {
@@ -259,65 +314,72 @@ export default function SecurityMazeGame() {
     setWon(false);
     setCaught(false);
     setRunning(false);
-    appendLog("Game reset to starting position.");
+    appendLog("Back in the van. Nobody saw that.");
   }, [appendLog]);
 
   // Move player with collision, item collection, and security checks
-  const movePlayer = useCallback((directionStr: string) => {
-    setPlayer(prev => {
-      if (won || caught) return prev;
+  const movePlayer = useCallback(
+    (directionStr: string) => {
+      setPlayer((prev) => {
+        if (won || caught) return prev;
 
-      let dx = 0;
-      let dy = 0;
-      const dir = directionStr.toUpperCase();
-      if (dir === 'UP') dy = -1;
-      else if (dir === 'DOWN') dy = 1;
-      else if (dir === 'LEFT') dx = -1;
-      else if (dir === 'RIGHT') dx = 1;
+        let dx = 0;
+        let dy = 0;
+        const dir = directionStr.toUpperCase();
+        if (dir === "UP") dy = -1;
+        else if (dir === "DOWN") dy = 1;
+        else if (dir === "LEFT") dx = -1;
+        else if (dir === "RIGHT") dx = 1;
 
-      const nextX = prev.x + dx;
-      const nextY = prev.y + dy;
+        const nextX = prev.x + dx;
+        const nextY = prev.y + dy;
 
-      if (!isOpen(nextX, nextY)) {
-        appendLog(`Collision! Cannot move into wall at (${nextX}, ${nextY})`);
-        return prev;
-      }
+        if (!isOpen(nextX, nextY)) {
+          appendLog(`Bonk. That's a wall, genius. (${nextX}, ${nextY})`);
+          return prev;
+        }
 
-      const nextPos = { x: nextX, y: nextY };
-      setM(m => m + 1);
+        const nextPos = { x: nextX, y: nextY };
+        setM((m) => m + 1);
 
-      // Check item collection
-      setItems(prevItems =>
-          prevItems.map(item => {
+        // Check item collection
+        setItems((prevItems) =>
+          prevItems.map((item) => {
             if (!item.collected && item.x === nextX && item.y === nextY) {
-              appendLog(`Collected Item #${item.id}!`);
+              appendLog(`◆ Diamond #${item.id} bagged. Lil guy is screaming.`);
               return { ...item, collected: true };
             }
             return item;
-          })
-      );
+          }),
+        );
 
-      // Check camera spot
-      if (checkCameraDetection(nextPos, cameras)) {
-        setCaught(true);
-        appendLog("ALARM! You were spotted by a security camera!");
-      }
-
-      // Check win condition (All items collected and on exit cell 2)
-      const updatedItems = items.map(item => (item.x === nextX && item.y === nextY ? { ...item, collected: true } : item));
-      const allCollected = updatedItems.every(i => i.collected);
-      if (grid[nextY]?.[nextX] === 2) {
-        if (allCollected) {
-          setWon(true);
-          appendLog("Success! All items collected and reached the exit!");
-        } else {
-          appendLog("Reached exit, but you still need to collect all 3 items!");
+        // Check camera spot
+        if (checkCameraDetection(nextPos, cameras)) {
+          setCaught(true);
+          appendLog("ALARM! You were spotted by a security camera!");
         }
-      }
 
-      return nextPos;
-    });
-  }, [won, caught, cameras, items, appendLog]);
+        // Check win condition (All items collected and on exit cell 2)
+        const updatedItems = items.map((item) =>
+          item.x === nextX && item.y === nextY
+            ? { ...item, collected: true }
+            : item,
+        );
+        const allCollected = updatedItems.every((i) => i.collected);
+        if (grid[nextY]?.[nextX] === 2) {
+          if (allCollected) {
+            setWon(true);
+            appendLog("Success! All diamonds collected and reached the exit!");
+          } else {
+            appendLog("The van's here but your pockets are light.");
+          }
+        }
+
+        return nextPos;
+      });
+    },
+    [won, caught, cameras, items, appendLog],
+  );
 
   // Helper setter for move count inside callback
   const setM = setMoves;
@@ -346,7 +408,9 @@ export default function SecurityMazeGame() {
 
       await pyodideRef.current.runPythonAsync(code);
 
-      const stdout = await pyodideRef.current.runPythonAsync("sys.stdout.getvalue()");
+      const stdout = await pyodideRef.current.runPythonAsync(
+        "sys.stdout.getvalue()",
+      );
       if (stdout) {
         appendLog(stdout.trim());
       }
@@ -361,17 +425,29 @@ export default function SecurityMazeGame() {
   // Keyboard manual controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); movePlayer('UP'); }
-      if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); movePlayer('DOWN'); }
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); movePlayer('LEFT'); }
-      if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); movePlayer('RIGHT'); }
+      if (["ArrowUp", "KeyW"].includes(e.code)) {
+        e.preventDefault();
+        movePlayer("UP");
+      }
+      if (["ArrowDown", "KeyS"].includes(e.code)) {
+        e.preventDefault();
+        movePlayer("DOWN");
+      }
+      if (["ArrowLeft", "KeyA"].includes(e.code)) {
+        e.preventDefault();
+        movePlayer("LEFT");
+      }
+      if (["ArrowRight", "KeyD"].includes(e.code)) {
+        e.preventDefault();
+        movePlayer("RIGHT");
+      }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [movePlayer]);
 
   const visionCells = getCameraVisionCells();
-  const collectedCount = items.filter(i => i.collected).length;
+  const collectedCount = items.filter((i) => i.collected).length;
   const ActiveBoard = BOARD_THEMES[boardTheme].Board;
 
   // ==========================================
@@ -379,24 +455,49 @@ export default function SecurityMazeGame() {
   // ==========================================
   const codeLines = code.split("\n").length;
   const statusLabel =
-    pyodideStatus === "loading" ? "py.runtime loading" : pyodideStatus === "ready" ? "py.runtime ready" : "py.runtime error";
+    pyodideStatus === "loading"
+      ? "py.runtime loading"
+      : pyodideStatus === "ready"
+        ? "py.runtime ready"
+        : "py.runtime error";
   const statusColor =
-    pyodideStatus === "loading" ? "text-slate-yellow" : pyodideStatus === "ready" ? "text-accent-primary" : "text-slate-red";
+    pyodideStatus === "loading"
+      ? "text-slate-yellow"
+      : pyodideStatus === "ready"
+        ? "text-accent-primary"
+        : "text-slate-red";
   const statusDot =
-    pyodideStatus === "loading" ? "bg-slate-yellow" : pyodideStatus === "ready" ? "bg-accent-primary" : "bg-slate-red";
+    pyodideStatus === "loading"
+      ? "bg-slate-yellow"
+      : pyodideStatus === "ready"
+        ? "bg-accent-primary"
+        : "bg-slate-red";
 
   return (
     <>
       <div className="w-full">
-        <Link href="/" className="text-xs text-dim transition hover:text-accent-primary">&lt; ../missions</Link>
+        <Link
+          href="/"
+          className="text-xs text-dim transition hover:text-accent-primary"
+        >
+          &lt; ../missions
+        </Link>
 
         <header className="mt-5 flex flex-col justify-between gap-5 border-b border-line pb-6 md:flex-row md:items-start">
           <div>
             <div className="text-[13px] text-dim">
-              root@heistschool:~$ <span className="text-foreground">./run laser_grid_maze --level=02</span>
+              root@heistschool:~${" "}
+              <span className="text-foreground">
+                ./run laser_grid_maze --level=02
+              </span>
             </div>
-            <h1 className="mb-3 mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-[38px]">Laser Grid Maze</h1>
-            <p className="text-[13px] text-muted-foreground">Navigate past surveillance, collect all 3 data shards, and reach the exit.</p>
+            <h1 className="mb-3 mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-[38px]">
+              The Camera Gauntlet
+            </h1>
+            <p className="text-[13px] text-muted-foreground">
+              Navigate past surveillance, collect all 3 diamonds, and reach the
+              exit.
+            </p>
           </div>
           <div className="flex flex-col items-start gap-3 md:items-end">
             <div className="flex flex-wrap gap-2 text-xs">
@@ -406,24 +507,28 @@ export default function SecurityMazeGame() {
                 disabled={pyodideStatus !== "ready" || running || won || caught}
                 className="border border-accent-primary bg-accent-primary px-3.5 py-2 font-semibold text-accent-primary-foreground transition hover:brightness-110 disabled:opacity-50"
               >
-                {running ? "[ running... ]" : "[ run_code ]"}
+                {running ? "[ sneaking... ]" : "[ execute_plan ]"}
               </button>
               <button
                 onClick={resetGame}
                 className="border border-line bg-panel-muted px-3.5 py-2 text-foreground transition hover:border-accent-primary/50 hover:text-accent-primary"
               >
-                [ reset ]
+                [ abort_mission ]
               </button>
               <button
                 onClick={() => setTutorialActive(true)}
                 title="Replay tutorial"
                 className="border border-line bg-panel-muted px-3.5 py-2 text-foreground transition hover:border-accent-primary/50 hover:text-accent-primary"
               >
-                [ help ]
+                [ call_lil_guy ]
               </button>
             </div>
-            <span className={`flex items-center gap-2 text-[11px] ${statusColor}`}>
-              <span className={`h-[7px] w-[7px] ${statusDot} ${pyodideStatus === "loading" ? "animate-pulse" : ""}`} />
+            <span
+              className={`flex items-center gap-2 text-[11px] ${statusColor}`}
+            >
+              <span
+                className={`h-[7px] w-[7px] ${statusDot} ${pyodideStatus === "loading" ? "animate-pulse" : ""}`}
+              />
               {statusLabel}
             </span>
           </div>
@@ -432,13 +537,19 @@ export default function SecurityMazeGame() {
         <div className="mt-6 grid gap-5 lg:grid-cols-12">
           {/* Left Column: Code Editor & Console */}
           <div className="flex flex-col gap-4 lg:col-span-5">
-            <div ref={editorRef} className="flex flex-col border border-line bg-panel-muted">
+            <div
+              ref={editorRef}
+              className="flex flex-col border border-line bg-panel-muted"
+            >
               <div className="flex items-center justify-between border-b border-line px-4 py-3 text-[11px] tracking-wide">
-                <span className="text-foreground">PYTHON_NAVIGATION_CODE</span>
-                <span className="text-dim">main.py</span>
+                <span className="text-foreground">THE_PLAN</span>
+                <span className="text-dim">heist.py</span>
               </div>
               <div className="flex max-h-[340px] min-h-[240px] overflow-auto bg-background">
-                <div aria-hidden className="select-none py-4 pl-4 pr-3 text-right text-xs leading-6 text-faint">
+                <div
+                  aria-hidden
+                  className="select-none py-4 pl-4 pr-3 text-right text-xs leading-6 text-faint"
+                >
                   {Array.from({ length: Math.max(codeLines, 10) }, (_, i) => (
                     <div key={i}>{i + 1}</div>
                   ))}
@@ -454,11 +565,16 @@ export default function SecurityMazeGame() {
                 />
               </div>
               <div className="border-t border-line px-4 py-2.5 text-[10px] text-dim">
-                apis: <span className="text-accent-primary">move(direction)</span> · <span className="text-accent-primary">print(value)</span>
+                apis:{" "}
+                <span className="text-accent-primary">move(direction)</span> ·{" "}
+                <span className="text-accent-primary">print(value)</span>
               </div>
             </div>
 
-            <div ref={consoleRef} className="flex flex-1 flex-col border border-line bg-panel-muted">
+            <div
+              ref={consoleRef}
+              className="flex flex-1 flex-col border border-line bg-panel-muted"
+            >
               <div className="flex items-center justify-between border-b border-line px-4 py-3 text-[11px] tracking-wide">
                 <span className="text-foreground">SYSTEM_CONSOLE</span>
                 <span className="text-dim">stdout</span>
@@ -467,9 +583,13 @@ export default function SecurityMazeGame() {
                 ref={logContainerRef}
                 className="max-h-[200px] min-h-[140px] flex-1 space-y-1 overflow-y-auto bg-background p-4 text-[11px] leading-5 text-muted-foreground"
               >
-                {logs.length === 0 && <span className="text-faint">&gt; no output yet</span>}
+                {logs.length === 0 && (
+                  <span className="text-faint">&gt; no output yet</span>
+                )}
                 {logs.map((log, idx) => (
-                  <div key={idx} className={logColor(log)}>&gt; {log}</div>
+                  <div key={idx} className={logColor(log)}>
+                    &gt; {log}
+                  </div>
                 ))}
               </div>
             </div>
@@ -515,26 +635,40 @@ export default function SecurityMazeGame() {
             {/* Status Banners */}
             {caught && (
               <div className="border border-slate-red/60 bg-slate-red/10 p-4 text-center">
-                <h3 className="text-sm font-bold tracking-wider text-slate-red">!! ALARM_TRIGGERED — CAUGHT ON CAMERA</h3>
-                <p className="mt-1 text-xs text-muted-foreground">Avoid the red sightlines or time your route around them.</p>
-                <button onClick={resetGame} className="mt-3 bg-slate-red px-4 py-1.5 text-xs font-semibold text-accent-primary-foreground hover:brightness-110">
-                  [ try_again ]
+                <h3 className="text-sm font-bold tracking-wider text-slate-red">
+                  !! BUSTED
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Smile, you're on camera.
+                </p>
+                <button
+                  onClick={resetGame}
+                  className="mt-3 bg-slate-red px-4 py-1.5 text-xs font-semibold text-accent-primary-foreground hover:brightness-110"
+                >
+                  [ post_bail ]
                 </button>
               </div>
             )}
 
             {won && (
               <div className="border border-accent-primary/60 bg-accent-secondary/40 p-4 text-center">
-                <h3 className="text-sm font-bold tracking-wider text-accent-primary">MISSION_COMPLETE</h3>
-                <p className="mt-1 text-xs text-muted-foreground">All shards collected — exfiltrated in {moves} moves.</p>
-                <button onClick={resetGame} className="mt-3 bg-accent-primary px-4 py-1.5 text-xs font-semibold text-accent-primary-foreground hover:brightness-110">
-                  [ play_again ]
+                <h3 className="text-sm font-bold tracking-wider text-accent-primary">
+                  CLEAN_GETAWAY
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  All diamonds bagged in {moves} footsteps.
+                </p>
+                <button
+                  onClick={resetGame}
+                  className="mt-3 bg-accent-primary px-4 py-1.5 text-xs font-semibold text-accent-primary-foreground hover:brightness-110"
+                >
+                  [ do_it_again ]
                 </button>
               </div>
             )}
 
             <div className="text-center text-[10px] text-faint">
-              manual input: WASD / arrow keys · avoid red camera sightlines
+              pro tip: standing in front of the camera is bad, actually
             </div>
           </div>
         </div>
@@ -547,24 +681,38 @@ export default function SecurityMazeGame() {
           </div>
           <div className="grid gap-3 p-3 sm:grid-cols-2">
             <div className="border border-line bg-background p-3.5">
-              <code className="text-xs font-semibold text-accent-primary">move(direction: str)</code>
+              <code className="text-xs font-semibold text-accent-primary">
+                move(direction: str)
+              </code>
               <p className="mt-1.5 text-[11px] leading-5 text-dim">
-                Moves one tile. Valid: <span className="text-slate-yellow">&quot;UP&quot;</span>, <span className="text-slate-yellow">&quot;DOWN&quot;</span>,{" "}
-                <span className="text-slate-yellow">&quot;LEFT&quot;</span>, <span className="text-slate-yellow">&quot;RIGHT&quot;</span>. Blocked by walls;
-                collects items automatically; triggers the alarm if a camera sees the tile.
+                Moves one tile. Valid:{" "}
+                <span className="text-slate-yellow">&quot;UP&quot;</span>,{" "}
+                <span className="text-slate-yellow">&quot;DOWN&quot;</span>,{" "}
+                <span className="text-slate-yellow">&quot;LEFT&quot;</span>,{" "}
+                <span className="text-slate-yellow">&quot;RIGHT&quot;</span>.
+                Blocked by walls; collects diamonds automatically; triggers the
+                alarm if a camera sees the tile.
               </p>
             </div>
             <div className="border border-line bg-background p-3.5">
-              <code className="text-xs font-semibold text-accent-primary">print(value)</code>
+              <code className="text-xs font-semibold text-accent-primary">
+                print(value)
+              </code>
               <p className="mt-1.5 text-[11px] leading-5 text-dim">
-                Outputs any value to SYSTEM_CONSOLE after your script finishes running.
+                Outputs any value to SYSTEM_CONSOLE after your script finishes
+                running.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} mascot />
+      <TutorialOverlay
+        steps={tutorialSteps}
+        active={tutorialActive}
+        onFinish={finishTutorial}
+        mascot
+      />
       <HintMascot hints={LEVEL_HINTS} hidden={tutorialActive} />
     </>
   );

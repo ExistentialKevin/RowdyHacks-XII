@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MASCOT_IMAGES, MASCOT_PEEP_SRC, MASCOT_PEEP_VOLUME } from "./mascotConfig";
 import { usePeep } from "./usePeep";
+import { useMascotMuted } from "./mascotMute";
 
 export interface SpeakingMascotProps {
   /** What the mascot says. Changing it restarts the speech animation. */
@@ -53,7 +54,8 @@ export default function SpeakingMascot({
 }: SpeakingMascotProps) {
   const [shown, setShown] = useState(0);
   const [mouthOpen, setMouthOpen] = useState(false);
-  const peep = usePeep(peepSrc, MASCOT_PEEP_VOLUME, muted);
+  const globalMuted = useMascotMuted();
+  const peep = usePeep(peepSrc, MASCOT_PEEP_VOLUME, muted || globalMuted);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 

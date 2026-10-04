@@ -22,8 +22,8 @@ export default function MiddleColumn({ levels = initialLevels }: MiddleColumnPro
             Available infiltration levels<span className="cursor-blink text-accent-primary">_</span>
           </h1>
           <p className="text-[13px] leading-7 text-muted-foreground">
-            Select a protocol to load the interactive maze environment. Each level has objectives,
-            progressive challenges and automated telemetry.
+            Every job is a Python puzzle. Write the plan, run it, and watch your crew move.
+            Get spotted and it's back to the drawing board.
           </p>
           <GuideGreeting levels={levels} active={active} />
         </div>
@@ -38,7 +38,7 @@ export default function MiddleColumn({ levels = initialLevels }: MiddleColumnPro
             <span className="flex items-center gap-1.5"><i className="h-[7px] w-[7px] bg-slate-yellow" />active</span>
             <span className="flex items-center gap-1.5"><i className="h-[7px] w-[7px] bg-faint" />locked</span>
           </div>
-          <span>[ crt: off ]</span>
+          <span>[ fake_mustache: on ]</span>
         </div>
       </div>
     </section>

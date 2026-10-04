@@ -6,7 +6,7 @@ import EditorPanel from "./components/EditorPanel";
 import TicketBoard from "./components/TicketBoard";
 
 export const metadata: Metadata = {
-  title: "Workspace · Heist School",
+  title: "Planning Room · Heist School",
   description: "Repo, editor and tickets for your team project, all on one page.",
 };
 

@@ -25,7 +25,7 @@ export default function ProgressBar({
       >
         <div className={`absolute inset-y-0 left-0 ${fillClass}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-1 text-[11px] text-dim">{label ?? `${current}/${total} items`}</div>
+      <div className="mt-1 text-[11px] text-dim">{label ?? `${current}/${total} loot`}</div>
     </div>
   );
 }

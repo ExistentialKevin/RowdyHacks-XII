@@ -14,8 +14,8 @@ export interface LevelData {
 export const initialLevels: LevelData[] = [
   {
     levelNumber: 1,
-    name: "Variables",
-    description: "Python basics: navigate hallways, discover sensor trips, unlock the perimeter.",
+    name: "The Casing",
+    description: "Scope the place out. Variables 101.",
     current: 5,
     total: 5,
     difficulty: "Beginner",
@@ -24,8 +24,8 @@ export const initialLevels: LevelData[] = [
   },
   {
     levelNumber: 2,
-    name: "Laser Grid Maze",
-    description: "Pathfinding loops to outsmart oscillating infrared beams.",
+    name: "The Camera Gauntlet",
+    description: "Dodge three cameras, bag three diamonds.",
     current: 3,
     total: 6,
     difficulty: "Intermediate",
@@ -34,8 +34,8 @@ export const initialLevels: LevelData[] = [
   },
   {
     levelNumber: 3,
-    name: "Vault Sequence",
-    description: "Conditional logic and state inspection to bypass pressure locks.",
+    name: "The Inside Job",
+    description: "Lift the code off the guard's terminal.",
     current: 1,
     total: 8,
     difficulty: "Advanced",
@@ -44,8 +44,8 @@ export const initialLevels: LevelData[] = [
   },
   {
     levelNumber: 4,
-    name: "Cipher Core",
-    description: "Crack dynamic ciphers under a real-time countdown.",
+    name: "The Vault",
+    description: "The big one. Crack the cipher before the cops show.",
     current: 0,
     total: 10,
     difficulty: "Expert",

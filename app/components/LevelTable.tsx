@@ -26,7 +26,7 @@ export default function LevelTable({ levels }: { levels: LevelData[] }) {
   return (
     <section className="border border-line bg-panel-muted">
       <div className="flex items-center justify-between border-b border-line px-4 py-3.5 text-xs">
-        <span className="text-foreground">SECTOR_LEVELS ({levels.length})</span>
+        <span className="text-foreground">JOB_BOARD ({levels.length})</span>
         <span className="text-dim">sort: id ↑</span>
       </div>
 
@@ -60,7 +60,7 @@ export default function LevelTable({ levels }: { levels: LevelData[] }) {
                 current={lvl.current}
                 total={lvl.total}
                 fillClass={levelFill(lvl)}
-                label={lvl.locked ? "access denied" : undefined}
+                label={lvl.locked ? "vault sealed" : undefined}
               />
             </div>
             <span className="text-right text-xs">

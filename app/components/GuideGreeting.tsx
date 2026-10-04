@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SpeakingMascot from "./mascot/SpeakingMascot";
+import MascotMuteToggle from "./mascot/MascotMuteToggle";
 import type { LevelData } from "../data/levels";
 
 /**
@@ -15,7 +16,7 @@ export default function GuideGreeting({ levels, active }: { levels: LevelData[];
 
   const lines = [
     `Psst, recruit. It's me, lil guy. I'll be on comms for the whole job. You've cleared ${cleared} of ${levels.length} sectors so far.`,
-    `${active.name} is still hot: ${remaining} item${remaining === 1 ? "" : "s"} left to grab. Stay out of the red camera sightlines and you'll be fine.`,
+    `${active.name} is still hot: ${remaining} piece${remaining === 1 ? "" : "s"} of loot left to grab. Stay out of the red camera sightlines and you'll be fine.`,
     locked
       ? `Finish the open sectors and I'll crack the door to ${locked.name}. That's where the real score is.`
       : "Every sector is open. Go get 'em.",
@@ -34,8 +35,11 @@ export default function GuideGreeting({ levels, active }: { levels: LevelData[];
       className="mt-6 max-w-xl"
     >
       <div className="flex items-center justify-between text-[11px]">
-        <span className="text-dim">
-          msg {i + 1}/{lines.length}
+        <span className="flex items-center gap-3">
+          <span className="text-dim">
+            msg {i + 1}/{lines.length}
+          </span>
+          <MascotMuteToggle />
         </span>
         <button
           type="button"
