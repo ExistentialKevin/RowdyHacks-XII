@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import TutorialOverlay, { TutorialStep } from "../components/TutorialOverlay";
+
+const STEP_DELAY_MS = 300; // time between each visible move
+const AUTO_RESET_DELAY_MS = 2000; // how long the failure message stays before auto reset
 
 // ==========================================
 // TYPES & INTERFACES
 // ==========================================
 export type Cell = 0 | 1 | 2;
 export type Pos = { x: number; y: number };
-export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
 export interface Camera {
   id: string;
@@ -15,7 +19,6 @@ export interface Camera {
   y: number;
   direction: Direction;
   range: number;
-  sprite: string;
 }
 
 export interface Item {
@@ -23,8 +26,13 @@ export interface Item {
   x: number;
   y: number;
   collected: boolean;
-  sprite: string;
 }
+
+type Outcome =
+    | { type: "won" }
+    | { type: "caught" }
+    | { type: "incomplete"; reason: string }
+    | null;
 
 // ==========================================
 // MAZE CONFIGURATION & CONSTANTS
@@ -46,15 +54,15 @@ export const grid: Cell[][] = [
 export const START: Pos = { x: 1, y: 1 };
 
 export const INITIAL_ITEMS: Item[] = [
-  { id: 1, x: 5, y: 1, collected: false, sprite: 'https://placehold.co/32x32/f59e0b/ffffff?text=💎' },
-  { id: 2, x: 7, y: 7, collected: false, sprite: 'https://placehold.co/32x32/f59e0b/ffffff?text=💎' },
-  { id: 3, x: 1, y: 9, collected: false, sprite: 'https://placehold.co/32x32/f59e0b/ffffff?text=💎' },
+  { id: 1, x: 5, y: 1, collected: false },
+  { id: 2, x: 7, y: 7, collected: false },
+  { id: 3, x: 1, y: 9, collected: false },
 ];
 
 export const INITIAL_CAMERAS: Camera[] = [
-  { id: 'cam1', x: 3, y: 1, direction: 'DOWN', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
-  { id: 'cam2', x: 9, y: 5, direction: 'DOWN', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
-  { id: 'cam3', x: 7, y: 3, direction: 'RIGHT', range: 3, sprite: 'https://placehold.co/32x32/ef4444/ffffff?text=📷' },
+  { id: "cam1", x: 3, y: 1, direction: "DOWN", range: 3 },
+  { id: "cam2", x: 9, y: 5, direction: "DOWN", range: 3 },
+  { id: "cam3", x: 7, y: 3, direction: "RIGHT", range: 3 },
 ];
 
 const STARTER_PYTHON_CODE = `# Write your maze navigation code here!
@@ -68,428 +76,646 @@ move("DOWN")
 `;
 
 // ==========================================
+// HELPERS (pure functions, outside the component)
+// ==========================================
+const isOpen = (x: number, y: number): boolean => {
+  const cell = grid[y]?.[x];
+  return cell === 1 || cell === 2;
+};
+
+const freshItems = (): Item[] => INITIAL_ITEMS.map(i => ({ ...i }));
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+/** All open cells a single camera can currently see (walls block vision). */
+function getCameraCells(cam: Camera): Pos[] {
+  const dx = cam.direction === "RIGHT" ? 1 : cam.direction === "LEFT" ? -1 : 0;
+  const dy = cam.direction === "DOWN" ? 1 : cam.direction === "UP" ? -1 : 0;
+  const cells: Pos[] = [];
+  for (let i = 1; i <= cam.range; i++) {
+    const cx = cam.x + dx * i;
+    const cy = cam.y + dy * i;
+    if (!isOpen(cx, cy)) break;
+    cells.push({ x: cx, y: cy });
+  }
+  return cells;
+}
+
+// Vision never changes (cameras are static), so compute it once.
+const VISION_SET: Set<string> = (() => {
+  const set = new Set<string>();
+  INITIAL_CAMERAS.forEach(cam => getCameraCells(cam).forEach(c => set.add(`${c.x},${c.y}`)));
+  return set;
+})();
+
+// ==========================================
+// ANIMATED CAMERA SPRITE (inline SVG, no external images)
+// ==========================================
+const CAMERA_ROTATION: Record<Direction, number> = { DOWN: 0, RIGHT: -90, UP: 180, LEFT: 90 };
+
+function CameraSprite({ direction, delay = 0 }: { direction: Direction; delay?: number }) {
+  return (
+      <svg
+          viewBox="0 0 40 40"
+          className="h-9 w-9 overflow-visible"
+          style={{ transform: `rotate(${CAMERA_ROTATION[direction]}deg)` }}
+          aria-label={`Security camera facing ${direction.toLowerCase()}`}
+      >
+        {/* Wall mount (fixed) */}
+        <rect x="15" y="1" width="10" height="5" rx="1.5" fill="#52525b" />
+        {/* Head sweeps left and right around the mount */}
+        <g className="cam-sweep" style={{ animationDelay: `${delay}s` }}>
+          <rect x="18" y="5" width="4" height="6" fill="#71717a" />
+          <rect x="9" y="10" width="22" height="17" rx="4" fill="#27272a" stroke="#ef4444" strokeWidth="1.5" />
+          <rect x="9" y="10" width="22" height="5" rx="3" fill="#3f3f46" />
+          {/* Lens */}
+          <circle cx="20" cy="27" r="6" fill="#18181b" stroke="#52525b" strokeWidth="1.5" />
+          <circle cx="20" cy="27" r="3.5" fill="#ef4444" className="cam-lens" />
+          <circle cx="18.5" cy="25.5" r="1" fill="#fecaca" />
+          {/* Status LED */}
+          <circle cx="27" cy="14" r="1.6" fill="#f87171" className="cam-led" />
+        </g>
+      </svg>
+  );
+}
+
+// ==========================================
+// PLAYER: BABY CHICK THIEF (inline SVG)
+// ==========================================
+function ChickThiefSprite() {
+  return (
+      <svg viewBox="0 0 40 40" className="h-full w-full" aria-label="Baby chick wearing a black thief mask">
+        {/* Feet */}
+        <path d="M14 34 L13 38 M14 34 L16 38 M26 34 L24 38 M26 34 L27 38" stroke="#f97316" strokeWidth="1.6" strokeLinecap="round" />
+        {/* Fluffy round body */}
+        <ellipse cx="20" cy="25" rx="13" ry="11" fill="#fde047" stroke="#ca8a04" strokeWidth="1" />
+        {/* Little wings */}
+        <ellipse cx="8.5" cy="26" rx="3.2" ry="5" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" transform="rotate(12 8.5 26)" />
+        <ellipse cx="31.5" cy="26" rx="3.2" ry="5" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" transform="rotate(-12 31.5 26)" />
+        {/* Black balaclava over the head */}
+        <path d="M9.5 17 C9.5 7 14 3.5 20 3.5 C26 3.5 30.5 7 30.5 17 L30.5 22 L9.5 22 Z" fill="#18181b" />
+        <path d="M14 6 L14.5 12 M20 4.5 L20 11 M26 6 L25.5 12" stroke="#3f3f46" strokeWidth="0.8" strokeLinecap="round" />
+        {/* Rolled brim */}
+        <rect x="8.5" y="20.5" width="23" height="4.5" rx="2.2" fill="#27272a" stroke="#52525b" strokeWidth="0.6" />
+        {/* Eye opening */}
+        <rect x="11.5" y="11" width="17" height="6.5" rx="3.2" fill="#fde047" />
+        {/* Sneaky eyes */}
+        <circle cx="16" cy="14.2" r="2.1" fill="#fff" />
+        <circle cx="24" cy="14.2" r="2.1" fill="#fff" />
+        <circle cx="16.6" cy="14.4" r="1.2" fill="#18181b" />
+        <circle cx="24.6" cy="14.4" r="1.2" fill="#18181b" />
+        {/* Beak pokes out of the mask */}
+        <path d="M17.6 18.2 L22.4 18.2 L20 21.4 Z" fill="#fb923c" stroke="#c2410c" strokeWidth="0.6" strokeLinejoin="round" />
+      </svg>
+  );
+}
+
+// ==========================================
+// ITEM: ANIMATED MONEY BAG (inline SVG, shakes)
+// ==========================================
+function MoneyBagSprite({ delay = 0 }: { delay?: number }) {
+  return (
+      <svg
+          viewBox="0 0 32 32"
+          className="bag-shake h-8 w-8 overflow-visible drop-shadow-[0_0_6px_rgba(245,158,11,0.8)]"
+          style={{ animationDelay: `${delay}s` }}
+          aria-label="Money bag"
+      >
+        {/* Gathered top */}
+        <path d="M10 8 L8.5 3.5 L13.5 6 L16 2.5 L18.5 6 L23.5 3.5 L22 8 Z" fill="#d97706" stroke="#78350f" strokeWidth="1" strokeLinejoin="round" />
+        {/* Bag body */}
+        <path d="M11 8.5 Q16 11.5 21 8.5 L24.5 14 Q30 20.5 26.5 26 Q24 30 16 30 Q8 30 5.5 26 Q2 20.5 7.5 14 Z" fill="#f59e0b" stroke="#78350f" strokeWidth="1.2" strokeLinejoin="round" />
+        {/* Tie */}
+        <path d="M10.5 9.5 Q16 12.5 21.5 9.5" fill="none" stroke="#78350f" strokeWidth="2" strokeLinecap="round" />
+        {/* Highlight */}
+        <path d="M9 17 Q8 21 10 24" fill="none" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
+        {/* Dollar sign */}
+        <text x="16" y="25" textAnchor="middle" fontSize="12" fontWeight="800" fontFamily="ui-sans-serif, system-ui, sans-serif" fill="#78350f">$</text>
+      </svg>
+  );
+}
+
+// ==========================================
 // MAIN SECURITY MAZE GAME COMPONENT
 // ==========================================
 export default function SecurityMazeGame() {
   const [code, setCode] = useState(STARTER_PYTHON_CODE);
   const [player, setPlayer] = useState<Pos>(START);
-  const [items, setItems] = useState<Item[]>(JSON.parse(JSON.stringify(INITIAL_ITEMS)));
-  const [cameras, setCameras] = useState<Camera[]>(INITIAL_CAMERAS);
+  const [items, setItems] = useState<Item[]>(freshItems());
   const [moves, setMoves] = useState(0);
-  const [won, setWon] = useState(false);
-  const [caught, setCaught] = useState(false);
-  const [failedIncomplete, setFailedIncomplete] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome>(null);
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [pyodideStatus, setPyodideStatus] = useState<"loading" | "ready" | "error">("loading");
 
+  const cameras = INITIAL_CAMERAS;
+
   const pyodideRef = useRef<any>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
-  const moveQueueRef = useRef<string[]>([]);
+  const mountedRef = useRef(true);
+  const runningRef = useRef(false);
+  const runIdRef = useRef(0); // lets us cancel an in-flight run
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Tutorial spotlight targets
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [tutorialDone, setTutorialDone] = useState(false); // game stays locked until this is true
+  const editorRef = useRef<HTMLDivElement>(null);
+  const runButtonRef = useRef<HTMLButtonElement>(null);
+  const consoleRef = useRef<HTMLDivElement>(null);
+  const mazeRef = useRef<HTMLDivElement>(null);
+  const apiRef = useRef<HTMLDivElement>(null);
+
+  // Start the tutorial as soon as the page mounts (refs are attached by now)
+  useEffect(() => {
+    setTutorialActive(true);
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      runIdRef.current++; // cancel any in-flight run
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
+
+  const finishTutorial = useCallback(() => {
+    setTutorialActive(false);
+    setTutorialDone(true);
+  }, []);
+
+  const tutorialSteps: TutorialStep[] = [
+    {
+      target: editorRef,
+      title: "Write your navigation code",
+      body: 'This is your Python editor. Call move("UP"/"DOWN"/"LEFT"/"RIGHT") to plan a path through the maze before running it.',
+      placement: "right",
+    },
+    {
+      target: runButtonRef,
+      title: "Run your code",
+      body: "Once the Python runtime shows ready, click here to execute your script and watch the player move step by step.",
+      placement: "bottom",
+    },
+    {
+      target: consoleRef,
+      title: "Watch the console",
+      body: "Collisions, item pickups, and alarms are all logged here, along with anything your script prints.",
+      placement: "right",
+    },
+    {
+      target: mazeRef,
+      title: "The maze board",
+      body: "Red tiles are camera vision cones — step into one and you're caught. Grab all 3 items, then reach the green EXIT tile.",
+      placement: "left",
+    },
+    {
+      target: apiRef,
+      title: "Available APIs",
+      body: "This reference lists every function your Python code can call in this level, plus what it does.",
+      placement: "top",
+    },
+  ];
 
   // Append log helper
   const appendLog = useCallback((msg: string) => {
+    if (!mountedRef.current) return;
     setLogs(prev => [...prev, msg]);
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
   }, []);
+
+  // Keep the console scrolled to the newest line (runs after the DOM updates)
+  useEffect(() => {
+    const el = logContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [logs]);
 
   // Initialize Pyodide runtime on mount
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
+
     async function loadPyodideRuntime() {
       try {
         appendLog("Loading Python WebAssembly runtime...");
+
         if (!(window as any).loadPyodide) {
-          const script = document.createElement("script");
-          script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
-          script.async = true;
-          document.body.appendChild(script);
-          await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = reject;
+          const SCRIPT_ID = "pyodide-script";
+          let script = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+          if (!script) {
+            script = document.createElement("script");
+            script.id = SCRIPT_ID;
+            script.src = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
+            script.async = true;
+            document.body.appendChild(script);
+          }
+          const s = script;
+          await new Promise<void>((resolve, reject) => {
+            if ((window as any).loadPyodide) return resolve();
+            s.addEventListener("load", () => resolve());
+            s.addEventListener("error", () => reject(new Error("script failed")));
           });
         }
 
         const pyodideInstance = await (window as any).loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/",
         });
 
-        if (isMounted) {
+        if (!cancelled) {
           pyodideRef.current = pyodideInstance;
           setPyodideStatus("ready");
           appendLog("Python runtime ready successfully!");
         }
       } catch (err) {
-        if (isMounted) {
+        if (!cancelled) {
           setPyodideStatus("error");
           appendLog("Failed to load Python runtime.");
         }
       }
     }
+
     loadPyodideRuntime();
-    return () => { isMounted = false; };
+    return () => {
+      cancelled = true;
+    };
   }, [appendLog]);
 
-  // Check if position is open
-  const isOpen = (x: number, y: number): boolean => {
-    const cell = grid[y]?.[x];
-    return cell === 1 || cell === 2;
-  };
-
-  // Calculate all cells illuminated by camera vision cones
-  const getCameraVisionCells = useCallback(() => {
-    const visionSet = new Set<string>();
-    cameras.forEach(cam => {
-      const dx = cam.direction === 'RIGHT' ? 1 : cam.direction === 'LEFT' ? -1 : 0;
-      const dy = cam.direction === 'DOWN' ? 1 : cam.direction === 'UP' ? -1 : 0;
-
-      for (let i = 1; i <= cam.range; i++) {
-        const cx = cam.x + dx * i;
-        const cy = cam.y + dy * i;
-        if (grid[cy]?.[cx] === 0) break;
-        visionSet.add(`${cx},${cy}`);
-      }
-    });
-    return visionSet;
-  }, [cameras]);
-
-  // Check if player is caught in camera sight
-  const checkCameraDetection = useCallback((currPlayer: Pos, currentCameras: Camera[]) => {
-    for (const cam of currentCameras) {
-      const dx = cam.direction === 'RIGHT' ? 1 : cam.direction === 'LEFT' ? -1 : 0;
-      const dy = cam.direction === 'DOWN' ? 1 : cam.direction === 'UP' ? -1 : 0;
-
-      for (let i = 1; i <= cam.range; i++) {
-        const cx = cam.x + dx * i;
-        const cy = cam.y + dy * i;
-        if (grid[cy]?.[cx] === 0) break;
-        if (cx === currPlayer.x && cy === currPlayer.y) {
-          return true;
-        }
-      }
+  // Put the board back to its starting state (logs are kept so the player can review them)
+  const resetBoard = useCallback(() => {
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
     }
-    return false;
-  }, []);
-
-  // Helper reset function
-  const resetMazeState = useCallback(() => {
+    runIdRef.current++; // cancel any in-flight run
+    runningRef.current = false;
     setPlayer(START);
-    setItems(JSON.parse(JSON.stringify(INITIAL_ITEMS)));
-    setCameras(INITIAL_CAMERAS);
+    setItems(freshItems());
     setMoves(0);
-    setWon(false);
-    setCaught(false);
-    setFailedIncomplete(false);
-    moveQueueRef.current = [];
+    setOutcome(null);
+    setRunning(false);
   }, []);
 
-  // Execute a single step movement from the queue
-  const processNextMove = useCallback(() => {
-    if (moveQueueRef.current.length === 0) {
-      setRunning(false);
-      appendLog("--- Execution Completed ---");
+  const resetGame = useCallback(() => {
+    resetBoard();
+    appendLog("Game reset to starting position.");
+  }, [resetBoard, appendLog]);
 
-      // Check if finished executing but not on exit grid or didn't win
-      setPlayer(currentPlayer => {
-        setItems(currentItems => {
-          const allCollected = currentItems.every(i => i.collected);
-          const atExit = grid[currentPlayer.y]?.[currentPlayer.x] === 2;
-          if (!atExit || !allCollected) {
-            setFailedIncomplete(true);
-            appendLog("Finished code execution, but you did not reach the exit with all items!");
-          }
-          return currentItems;
-        });
-        return currentPlayer;
-      });
-      return;
-    }
-
-    const directionStr = moveQueueRef.current.shift()!;
-
-    // Increment move counter cleanly by exactly 1 outside the updater
-    setMoves(m => m + 1);
-
-    setPlayer(prevPlayer => {
-      if (won || caught) return prevPlayer;
-
-      let dx = 0;
-      let dy = 0;
-      const dir = directionStr.toUpperCase();
-      if (dir === 'UP') dy = -1;
-      else if (dir === 'DOWN') dy = 1;
-      else if (dir === 'LEFT') dx = -1;
-      else if (dir === 'RIGHT') dx = 1;
-
-      const nextX = prevPlayer.x + dx;
-      const nextY = prevPlayer.y + dy;
-
-      if (!isOpen(nextX, nextY)) {
-        appendLog(`Collision! Cannot move into wall at (${nextX}, ${nextY})`);
-        return prevPlayer;
-      }
-
-      const nextPos = { x: nextX, y: nextY };
-
-      // Check item collection
-      setItems(prevItems =>
-          prevItems.map(item => {
-            if (!item.collected && item.x === nextX && item.y === nextY) {
-              appendLog(`Collected Item #${item.id}!`);
-              return { ...item, collected: true };
-            }
-            return item;
-          })
-      );
-
-      // Check camera spot
-      if (checkCameraDetection(nextPos, cameras)) {
-        setCaught(true);
-        appendLog("ALARM! You were spotted by a security camera!");
-        moveQueueRef.current = []; // Clear remaining queue
-        setRunning(false);
-        return nextPos;
-      }
-
-      // Check win condition
-      setItems(currentItems => {
-        const allCollected = currentItems.every(i => i.collected);
-        if (grid[nextY]?.[nextX] === 2) {
-          if (allCollected) {
-            setWon(true);
-            appendLog("Success! All items collected and reached the exit!");
-            moveQueueRef.current = [];
-            setRunning(false);
-          } else {
-            appendLog("Reached exit, but you still need to collect all 3 items!");
-          }
-        }
-        return currentItems;
-      });
-
-      return nextPos;
-    });
-
-    // Schedule the next grid step after a 300ms delay for smooth animation
-    setTimeout(() => {
-      processNextMove();
-    }, 300);
-  }, [won, caught, cameras, appendLog]);
+  // Show a failure message, then automatically send the player back to the start
+  const scheduleAutoReset = useCallback(
+      (result: Outcome) => {
+        setOutcome(result);
+        resetTimerRef.current = setTimeout(() => {
+          if (!mountedRef.current) return;
+          resetBoard();
+          appendLog("Player returned to the starting position. Try again!");
+        }, AUTO_RESET_DELAY_MS);
+      },
+      [resetBoard, appendLog]
+  );
 
   // Run Python Code
   const runPythonCode = async () => {
-    if (!pyodideRef.current || running) return;
+    if (!tutorialDone || !pyodideRef.current || runningRef.current) return;
 
-    // If player is not currently on the exit grid, auto-reset the maze
-    const currentCell = grid[player.y]?.[player.x];
-    if (currentCell !== 2 || !won) {
-      resetMazeState();
-      appendLog("Maze automatically reset for new run.");
-    }
-
+    // Always start a run from a clean board
+    resetBoard();
+    runningRef.current = true;
     setRunning(true);
-    moveQueueRef.current = [];
-    setFailedIncomplete(false);
+    const runId = ++runIdRef.current;
+    const cancelled = () => runIdRef.current !== runId || !mountedRef.current;
+
     appendLog("--- Executing Python Code ---");
 
+    // 1) Run the Python script and collect the requested moves
+    const queue: string[] = [];
     try {
-      // Expose python move helper function to queue moves
       pyodideRef.current.globals.set("move", (direction: string) => {
-        moveQueueRef.current.push(direction);
-      });
-      pyodideRef.current.globals.set("print_log", (msg: string) => {
-        appendLog(`[Python] ${msg}`);
+        queue.push(String(direction));
       });
 
       await pyodideRef.current.runPythonAsync(`
-        import sys
-        import io
-        sys.stdout = io.StringIO()
-      `);
+import sys, io
+sys.stdout = io.StringIO()
+`);
 
-      await pyodideRef.current.runPythonAsync(code);
+      try {
+        await pyodideRef.current.runPythonAsync(code);
+      } finally {
+        const stdout = await pyodideRef.current.runPythonAsync("sys.stdout.getvalue()");
+        if (stdout && String(stdout).trim()) appendLog(String(stdout).trim());
+      }
+    } catch (err: any) {
+      appendLog(`Error: ${err?.message ?? err}`);
+      runningRef.current = false;
+      setRunning(false);
+      return;
+    }
 
-      const stdout = await pyodideRef.current.runPythonAsync("sys.stdout.getvalue()");
-      if (stdout) {
-        appendLog(stdout.trim());
+    if (queue.length === 0) {
+      appendLog("Your code didn't call move(). Nothing to do!");
+      scheduleAutoReset({ type: "incomplete", reason: "Your code never moved the player." });
+      runningRef.current = false;
+      setRunning(false);
+      return;
+    }
+
+    // 2) Play the moves back one at a time. All game state lives in local variables
+    //    here (the single source of truth), then gets pushed to React state.
+    let pos: Pos = { ...START };
+    let localItems = freshItems();
+    let moveCount = 0;
+    let finished: "won" | "caught" | null = null;
+
+    for (const raw of queue) {
+      await sleep(STEP_DELAY_MS);
+      if (cancelled()) return;
+
+      const dir = raw.toUpperCase();
+      let dx = 0;
+      let dy = 0;
+      if (dir === "UP") dy = -1;
+      else if (dir === "DOWN") dy = 1;
+      else if (dir === "LEFT") dx = -1;
+      else if (dir === "RIGHT") dx = 1;
+      else {
+        appendLog(`Unknown direction "${raw}" - use "UP", "DOWN", "LEFT" or "RIGHT".`);
+        continue;
       }
 
-      // Start stepping through the queued moves smoothly
-      processNextMove();
-    } catch (err: any) {
-      appendLog(`Error: ${err.message}`);
-      setRunning(false);
+      const nextX = pos.x + dx;
+      const nextY = pos.y + dy;
+
+      if (!isOpen(nextX, nextY)) {
+        appendLog(`Collision! Cannot move into wall at (${nextX}, ${nextY})`);
+        continue; // blocked moves don't count
+      }
+
+      // A successful tile move counts as exactly one move
+      pos = { x: nextX, y: nextY };
+      moveCount += 1;
+      setPlayer(pos);
+      setMoves(moveCount);
+
+      // Item pickup
+      const hit = localItems.find(i => !i.collected && i.x === nextX && i.y === nextY);
+      if (hit) {
+        localItems = localItems.map(i => (i.id === hit.id ? { ...i, collected: true } : i));
+        setItems(localItems);
+        appendLog(`Collected Item #${hit.id}!`);
+      }
+
+      // Camera detection
+      if (VISION_SET.has(`${nextX},${nextY}`)) {
+        appendLog("ALARM! You were spotted by a security camera!");
+        finished = "caught";
+        break;
+      }
+
+      // Exit check
+      if (grid[nextY]?.[nextX] === 2) {
+        if (localItems.every(i => i.collected)) {
+          appendLog("Success! All items collected and reached the exit!");
+          finished = "won";
+          break;
+        } else {
+          appendLog("Reached exit, but you still need to collect all 3 items!");
+        }
+      }
+    }
+
+    if (cancelled()) return;
+
+    runningRef.current = false;
+    setRunning(false);
+
+    if (finished === "won") {
+      setOutcome({ type: "won" });
+    } else if (finished === "caught") {
+      scheduleAutoReset({ type: "caught" });
+    } else {
+      const atExit = grid[pos.y]?.[pos.x] === 2;
+      const collected = localItems.filter(i => i.collected).length;
+      const reason = atExit
+          ? `You reached the exit with only ${collected} of 3 items.`
+          : "Your code finished before the player reached the exit.";
+      appendLog(`--- Execution Completed: ${reason} ---`);
+      scheduleAutoReset({ type: "incomplete", reason });
     }
   };
 
-  const visionCells = getCameraVisionCells();
   const collectedCount = items.filter(i => i.collected).length;
+  const locked = !tutorialDone || running || outcome !== null;
 
   // ==========================================
   // RENDER COMPONENT UI
   // ==========================================
   return (
-      <div className="flex min-h-screen w-full flex-col bg-zinc-950 p-4 text-zinc-100 md:p-8">
-        <header className="mb-6 flex flex-col justify-between gap-4 border-b border-zinc-800 pb-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-emerald-400">Security Maze Infiltration</h1>
-            <p className="text-sm text-zinc-400">Navigate past camera vision cones, collect all 3 items, and reach the exit!</p>
-          </div>
-          <div className="flex items-center gap-3">
-          <span className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-300 border border-zinc-800">
-            {pyodideStatus === "loading" && "Loading Python runtime..."}
-            {pyodideStatus === "ready" && "🟢 Python Runtime Ready"}
-            {pyodideStatus === "error" && "🔴 Python Runtime Error"}
-          </span>
-            <button
-                onClick={runPythonCode}
-                disabled={pyodideStatus !== "ready" || running || won}
-                className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {running ? "Running..." : "Run Code"}
-            </button>
-          </div>
-        </header>
-
-        <div className="grid flex-1 grid-gap-6 lg:grid-cols-12 gap-6">
-          {/* Left Column: Code Editor & Console */}
-          <div className="flex flex-col gap-4 lg:col-span-5">
-            <div className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl">
-              <label className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">Python Navigation Code</label>
-              <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  rows={12}
-                  className="font-mono w-full rounded-lg bg-zinc-950 p-3 text-sm text-zinc-200 border border-zinc-800 focus:border-emerald-500 focus:outline-none resize-none"
-                  placeholder="Type your python script here..."
-              />
-              <div className="mt-2 text-xs text-zinc-500">
-                Commands: <code className="text-emerald-400">move("UP")</code>, <code className="text-emerald-400">move("DOWN")</code>, <code className="text-emerald-400">move("LEFT")</code>, <code className="text-emerald-400">move("RIGHT")</code>
-              </div>
+      <>
+        <style>{`
+        @keyframes cam-sweep { 0%, 100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
+        @keyframes cam-lens { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        @keyframes cam-led { 0%, 45% { opacity: 1; } 50%, 95% { opacity: 0.1; } 100% { opacity: 1; } }
+        @keyframes laser-pulse { 0%, 100% { box-shadow: inset 0 0 6px rgba(239,68,68,0.25); } 50% { box-shadow: inset 0 0 16px rgba(239,68,68,0.7), 0 0 8px rgba(239,68,68,0.35); } }
+        @keyframes laser-scan { 0% { top: 6%; opacity: 0; } 15%, 85% { opacity: 1; } 100% { top: 90%; opacity: 0; } }
+        @keyframes player-hop { 0% { transform: translateY(-6px) scale(0.85); } 60% { transform: translateY(1px) scale(1.05); } 100% { transform: translateY(0) scale(1); } }
+        .cam-sweep { transform-box: fill-box; transform-origin: 50% 0%; animation: cam-sweep 2.4s ease-in-out infinite; }
+        .cam-lens { animation: cam-lens 1.2s ease-in-out infinite; }
+        .cam-led { animation: cam-led 1s steps(1) infinite; }
+        .laser-cell { animation: laser-pulse 1.4s ease-in-out infinite; overflow: hidden; }
+        .laser-cell::after { content: ""; position: absolute; left: 8%; right: 8%; height: 2px; border-radius: 2px; background: #f87171; box-shadow: 0 0 6px 1px rgba(248,113,113,0.9); animation: laser-scan 1.4s linear infinite; }
+        @keyframes bag-shake { 0%, 55%, 100% { transform: rotate(0deg) translateX(0); } 6% { transform: rotate(-14deg) translateX(-1px); } 14% { transform: rotate(14deg) translateX(1px); } 22% { transform: rotate(-11deg) translateX(-1px); } 30% { transform: rotate(11deg) translateX(1px); } 38% { transform: rotate(-6deg); } 46% { transform: rotate(5deg); } }
+        .bag-shake { transform-box: fill-box; transform-origin: 50% 90%; animation: bag-shake 1.4s ease-in-out infinite; }
+        .player-hop { animation: player-hop ${STEP_DELAY_MS}ms ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .cam-sweep, .cam-lens, .cam-led, .bag-shake, .laser-cell, .laser-cell::after, .player-hop { animation: none; }
+        }
+      `}</style>
+        <div className="flex min-h-screen w-full flex-col bg-zinc-950 p-4 text-zinc-100 md:p-8">
+          <header className="mb-6 flex flex-col justify-between gap-4 border-b border-zinc-800 pb-4 md:flex-row md:items-center">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-emerald-400">Security Maze Infiltration</h1>
+              <p className="text-sm text-zinc-400">Navigate past camera vision cones, collect all 3 items, and reach the exit!</p>
             </div>
-
-            <div className="flex flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl min-h-[160px]">
-              <span className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">System Console / Logs</span>
-              <div ref={logContainerRef} className="flex-1 overflow-y-auto font-mono text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-lg border border-zinc-800 max-h-[180px]">
-                {logs.length === 0 && <span className="text-zinc-600">No logs yet...</span>}
-                {logs.map((log, idx) => (
-                    <div key={idx}>{log}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Maze Board & Status */}
-          <div className="flex flex-col items-center justify-start lg:col-span-7 gap-4">
-            <div className="flex w-full max-w-lg items-center justify-between rounded-xl bg-zinc-900/50 border border-zinc-800 px-6 py-3 shadow-md">
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase text-zinc-400 font-bold">Moves:</span>
-                <span className="text-lg font-mono font-bold text-emerald-400">{moves}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase text-zinc-400 font-bold">Items:</span>
-                <span className="text-lg font-mono font-bold text-amber-400">{collectedCount} / 3</span>
-              </div>
-            </div>
-
-            {/* Maze Grid Display */}
-            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl overflow-x-auto">
-              <div
-                  className="grid gap-1"
-                  style={{ gridTemplateColumns: `repeat(${grid[0].length}, minmax(0, 1fr))` }}
+            <div className="flex items-center gap-3">
+            <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-300">
+              {pyodideStatus === "loading" && "Loading Python runtime..."}
+              {pyodideStatus === "ready" && "🟢 Python Runtime Ready"}
+              {pyodideStatus === "error" && "🔴 Python Runtime Error"}
+            </span>
+              <button
+                  ref={runButtonRef}
+                  onClick={runPythonCode}
+                  disabled={pyodideStatus !== "ready" || locked}
+                  className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:bg-emerald-500 disabled:opacity-50"
               >
-                {grid.map((row, y) =>
-                    row.map((cellType, x) => {
-                      const isPlayerHere = player.x === x && player.y === y;
-                      const cameraHere = cameras.find(c => c.x === x && c.y === y);
-                      const itemHere = items.find(i => !i.collected && i.x === x && i.y === y);
-                      const isVision = visionCells.has(`${x},${y}`);
+                {running ? "Running..." : "Run Code"}
+              </button>
+              <button
+                  onClick={resetGame}
+                  disabled={running || !tutorialDone}
+                  className="rounded-full border border-zinc-700 bg-zinc-800 px-5 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 disabled:opacity-50"
+              >
+                Reset
+              </button>
+              <button
+                  onClick={() => setTutorialActive(true)}
+                  className="rounded-full border border-zinc-700 bg-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700"
+                  title="Replay tutorial"
+              >
+                ? Help
+              </button>
+            </div>
+          </header>
 
-                      let bgClass = "bg-zinc-800/80"; // Wall
-                      if (cellType === 1) bgClass = "bg-zinc-900/90"; // Open path
-                      if (cellType === 2) bgClass = "bg-emerald-950/60 border border-emerald-500/40"; // Exit
+          <div className="grid flex-1 gap-6 lg:grid-cols-12">
+            {/* Left Column: Code Editor & Console */}
+            <div className="flex flex-col gap-4 lg:col-span-5">
+              <div ref={editorRef} className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl">
+                <label className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">Python Navigation Code</label>
+                <textarea
+                    value={code}
+                    onChange={e => setCode(e.target.value)}
+                    rows={12}
+                    spellCheck={false}
+                    className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-sm text-zinc-200 focus:border-emerald-500 focus:outline-none"
+                    placeholder="Type your python script here..."
+                />
+                <div className="mt-2 text-xs text-zinc-500">
+                  Commands: <code className="text-emerald-400">move("UP")</code>, <code className="text-emerald-400">move("DOWN")</code>, <code className="text-emerald-400">move("LEFT")</code>, <code className="text-emerald-400">move("RIGHT")</code>
+                </div>
+              </div>
 
-                      if (isVision && cellType !== 0) {
-                        bgClass = "bg-red-950/40 border border-red-500/30"; // Camera vision cone
-                      }
-
-                      return (
-                          <div
-                              key={`${x}-${y}`}
-                              className={`relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg transition-all ${bgClass}`}
-                          >
-                            {/* Cell Type Marker */}
-                            {cellType === 2 && !isPlayerHere && (
-                                <span className="text-xs font-bold text-emerald-400">EXIT</span>
-                            )}
-
-                            {/* Item Sprite */}
-                            {itemHere && (
-                                <img
-                                    src={itemHere.sprite}
-                                    alt="Item"
-                                    className="h-6 w-6 object-contain animate-bounce"
-                                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                                />
-                            )}
-
-                            {/* Camera Sprite */}
-                            {cameraHere && (
-                                <div className="relative flex items-center justify-center">
-                                  <img
-                                      src={cameraHere.sprite}
-                                      alt="Camera"
-                                      className="h-7 w-7 object-contain drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-                                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                                  />
-                                  <span className="absolute -bottom-2 text-[9px] font-mono font-bold text-red-400 uppercase">
-                            {cameraHere.direction[0]}
-                          </span>
-                                </div>
-                            )}
-
-                            {/* Player Character (.jpg image) */}
-                            {isPlayerHere && (
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.9)] z-10 animate-pulse overflow-hidden">
-                                  <img
-                                      src="/my-character.jpg"
-                                      alt="Player"
-                                      className="h-full w-full object-cover"
-                                  />
-                                </div>
-                            )}
-                          </div>
-                      );
-                    })
-                )}
+              <div ref={consoleRef} className="flex min-h-[160px] flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl">
+                <span className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">System Console / Logs</span>
+                <div ref={logContainerRef} className="max-h-[180px] flex-1 space-y-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs text-zinc-300">
+                  {logs.length === 0 && <span className="text-zinc-600">No logs yet...</span>}
+                  {logs.map((log, idx) => (
+                      <div key={idx}>{log}</div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Status Banners */}
-            {caught && (
-                <div className="w-full max-w-lg rounded-xl bg-red-950/80 border border-red-600 p-4 text-center text-red-200 shadow-xl">
-                  <h3 className="text-lg font-bold">🚨 CAUGHT BY SECURITY CAMERA! 🚨</h3>
-                  <p className="text-sm mt-1">Avoid camera vision cones or time your movements carefully. Modify your code and click Run Code to try again!</p>
+            {/* Right Column: Maze Board & Status */}
+            <div className="flex flex-col items-center justify-start gap-4 lg:col-span-7">
+              <div className="flex w-full max-w-lg items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-6 py-3 shadow-md">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase text-zinc-400">Moves:</span>
+                  <span className="font-mono text-lg font-bold text-emerald-400">{moves}</span>
                 </div>
-            )}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase text-zinc-400">Items:</span>
+                  <span className="font-mono text-lg font-bold text-amber-400">{collectedCount} / 3</span>
+                </div>
+              </div>
 
-            {failedIncomplete && !won && !caught && (
-                <div className="w-full max-w-lg rounded-xl bg-amber-950/80 border border-amber-600 p-4 text-center text-amber-200 shadow-xl">
-                  <h3 className="text-lg font-bold">⚠️️ MAZE INCOMPLETE ⚠️</h3>
-                  <p className="text-sm mt-1">You ran out of movements before reaching the exit tile with all 3 items! Modify your code and try again.</p>
-                </div>
-            )}
+              {/* Maze Grid Display */}
+              <div ref={mazeRef} className="relative overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl">
+                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${grid[0].length}, minmax(0, 1fr))` }}>
+                  {grid.map((row, y) =>
+                      row.map((cellType, x) => {
+                        const isPlayerHere = player.x === x && player.y === y;
+                        const cameraHere = cameras.find(c => c.x === x && c.y === y);
+                        const itemHere = items.find(i => !i.collected && i.x === x && i.y === y);
+                        const isVision = VISION_SET.has(`${x},${y}`);
 
-            {won && (
-                <div className="w-full max-w-lg rounded-xl bg-emerald-950/80 border border-emerald-500 p-4 text-center text-emerald-200 shadow-xl">
-                  <h3 className="text-lg font-bold">🎉 MISSION ACCOMPLISHED! 🎉</h3>
-                  <p className="text-sm mt-1">Successfully collected all items and escaped in {moves} moves!</p>
+                        let bgClass = "bg-zinc-800/80"; // Wall
+                        if (cellType === 1) bgClass = "bg-zinc-900/90"; // Open path
+                        if (cellType === 2) bgClass = "bg-emerald-950/60 border border-emerald-500/40"; // Exit
+                        if (isVision && cellType !== 0) bgClass = "laser-cell bg-red-950/50 border border-red-500/40"; // Laser vision cone
+
+                        return (
+                            <div
+                                key={`${x}-${y}`}
+                                className={`relative flex h-10 w-10 items-center justify-center rounded-lg transition-all sm:h-12 sm:w-12 ${bgClass}`}
+                            >
+                              {/* Exit marker */}
+                              {cellType === 2 && !isPlayerHere && (
+                                  <span className="text-xs font-bold text-emerald-400">EXIT</span>
+                              )}
+
+                              {/* Item Sprite */}
+                              {itemHere && (
+                                  <div className="z-10 flex items-center justify-center">
+                                    <MoneyBagSprite delay={(itemHere.id - 1) * 0.25} />
+                                  </div>
+                              )}
+
+                              {/* Camera Sprite */}
+                              {cameraHere && (
+                                  <div className="relative z-10 flex items-center justify-center drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                                    <CameraSprite direction={cameraHere.direction} delay={cameras.indexOf(cameraHere) * 0.6} />
+                                  </div>
+                              )}
+
+                              {/* Player: baby chick thief (hops into each new tile) */}
+                              {isPlayerHere && (
+                                  <div className="player-hop z-10 flex h-9 w-9 items-center justify-center sm:h-11 sm:w-11 drop-shadow-[0_0_8px_rgba(16,185,129,0.9)]">
+                                    <ChickThiefSprite />
+                                  </div>
+                              )}
+                            </div>
+                        );
+                      })
+                  )}
                 </div>
-            )}
+              </div>
+
+              {/* Status Banners */}
+              {outcome?.type === "caught" && (
+                  <div className="w-full max-w-lg rounded-xl border border-red-600 bg-red-950/80 p-4 text-center text-red-200 shadow-xl">
+                    <h3 className="text-lg font-bold">🚨 CAUGHT BY SECURITY CAMERA! 🚨</h3>
+                    <p className="mt-1 text-sm">Avoid camera vision cones. Resetting to the start...</p>
+                  </div>
+              )}
+
+              {outcome?.type === "incomplete" && (
+                  <div className="w-full max-w-lg rounded-xl border border-amber-600 bg-amber-950/80 p-4 text-center text-amber-200 shadow-xl">
+                    <h3 className="text-lg font-bold">⚠️ Exit not reached</h3>
+                    <p className="mt-1 text-sm">{outcome.reason} Resetting to the start...</p>
+                  </div>
+              )}
+
+              {outcome?.type === "won" && (
+                  <div className="w-full max-w-lg rounded-xl border border-emerald-500 bg-emerald-950/80 p-4 text-center text-emerald-200 shadow-xl">
+                    <h3 className="text-lg font-bold">🎉 MISSION ACCOMPLISHED! 🎉</h3>
+                    <p className="mt-1 text-sm">Successfully collected all items and escaped in {moves} moves!</p>
+                    <button
+                        onClick={resetGame}
+                        className="mt-3 rounded-full bg-emerald-600 px-6 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500"
+                    >
+                      Play Again
+                    </button>
+                  </div>
+              )}
+            </div>
+          </div>
+
+          {/* Available APIs Reference */}
+          <div ref={apiRef} className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-xl">
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-emerald-400">Available APIs</h2>
+            <p className="mb-4 text-xs text-zinc-500">Functions your Python code can call in this level.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+                <code className="font-mono text-sm font-semibold text-emerald-400">move(direction: str)</code>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Moves the player one tile. <code className="text-zinc-300">direction</code> is one of{" "}
+                  <code className="text-zinc-300">"UP"</code>, <code className="text-zinc-300">"DOWN"</code>,{" "}
+                  <code className="text-zinc-300">"LEFT"</code>, <code className="text-zinc-300">"RIGHT"</code>.
+                  Blocked by walls, collects items automatically, and triggers the alarm if a camera sees the tile.
+                </p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+                <code className="font-mono text-sm font-semibold text-emerald-400">print(value)</code>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Standard Python <code className="text-zinc-300">print()</code>. Output is captured and shown in the
+                  System Console after your script finishes running.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} />
+      </>
   );
 }
