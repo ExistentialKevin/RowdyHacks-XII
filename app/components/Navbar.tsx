@@ -1,6 +1,13 @@
 import Link from "next/link";
 
-export default function Navbar() {
+type NavKey = "operations" | "workspace";
+
+const ACTIVE_LINK =
+  "rounded-lg bg-panel-elevated border border-panel-border px-3.5 py-2 text-foreground font-semibold transition hover:border-accent-primary/30";
+const IDLE_LINK =
+  "rounded-lg px-3.5 py-2 hover:bg-panel-elevated hover:text-accent-primary transition";
+
+export default function Navbar({ active = "operations" }: { active?: NavKey }) {
   return (
     <header className="sticky top-0 z-50 border-b border-panel-border bg-panel/90 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -26,7 +33,8 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-muted-foreground">
           <Link
             href="/"
-            className="rounded-lg bg-panel-elevated border border-panel-border px-3.5 py-2 text-foreground font-semibold transition hover:border-accent-primary/30"
+            aria-current={active === "operations" ? "page" : undefined}
+            className={active === "operations" ? ACTIVE_LINK : IDLE_LINK}
           >
             Operations
           </Link>
@@ -35,6 +43,13 @@ export default function Navbar() {
             className="rounded-lg px-3.5 py-2 hover:bg-panel-elevated hover:text-accent-primary transition"
           >
             Play Maze
+          </Link>
+          <Link
+            href="/workspace"
+            aria-current={active === "workspace" ? "page" : undefined}
+            className={active === "workspace" ? ACTIVE_LINK : IDLE_LINK}
+          >
+            Workspace
           </Link>
         </nav>
 
