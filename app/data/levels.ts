@@ -6,48 +6,51 @@ export interface LevelData {
   total: number;
   difficulty: "Beginner" | "Intermediate" | "Advanced" | "Expert";
   category: string;
-  href: string;
+  /** Route for the level, or null if it has no playable page yet. */
+  href: string | null;
+  locked?: boolean;
 }
 
 export const initialLevels: LevelData[] = [
   {
     levelNumber: 1,
     name: "Variables",
-    description: "Initiate Python basics: navigate hallways, discover sensor trips, and unlock the primary perimeter airlock.",
+    description: "Python basics: navigate hallways, discover sensor trips, unlock the perimeter.",
     current: 5,
     total: 5,
     difficulty: "Beginner",
     category: "Tutorial",
-    href: "/game/1",
+    href: null,
   },
   {
     levelNumber: 2,
     name: "Laser Grid Maze",
-    description: "Program algorithmic pathfinding loops to outsmart oscillating infrared beams and reach the server console.",
+    description: "Pathfinding loops to outsmart oscillating infrared beams.",
     current: 3,
     total: 6,
     difficulty: "Intermediate",
     category: "Infiltration",
-    href: "/game/2",
+    href: "/levels/2",
   },
   {
     levelNumber: 3,
     name: "Vault Sequence",
-    description: "Implement conditioned logic and state inspection to bypass multi-layer pneumatic pressure locks.",
+    description: "Conditional logic and state inspection to bypass pressure locks.",
     current: 1,
     total: 8,
     difficulty: "Advanced",
     category: "Cracking",
-    href: "/game/3",
+    href: "/levels/3",
   },
   {
     levelNumber: 4,
     name: "Cipher Core",
-    description: "Crack dynamic cryptographic ciphers under a real-time watchdog countdown timer before alarm triggers.",
+    description: "Crack dynamic ciphers under a real-time countdown.",
     current: 0,
     total: 10,
     difficulty: "Expert",
     category: "Heist",
-    href: "/game/4",
+    href: null,
+    locked: true,
   },
 ];
