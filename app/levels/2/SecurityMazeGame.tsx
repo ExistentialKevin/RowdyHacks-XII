@@ -3,6 +3,9 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import TutorialOverlay, { TutorialStep } from "../components/TutorialOverlay";
+// Board theme + player character live in ./boards — see boards/index.ts (theme switch)
+// and boards/PlayerAvatar.tsx (character model).
+import { BOARD_THEME, BOARD_THEMES, SHOW_THEME_PICKER, type BoardTheme } from "./boards";
 
 const TUTORIAL_STORAGE_KEY = "tutorial-level2-seen";
 
@@ -86,6 +89,8 @@ export default function SecurityMazeGame() {
   const [logs, setLogs] = useState<string[]>([]);
   const [pyodideStatus, setPyodideStatus] = useState<"loading" | "ready" | "error">("loading");
 
+  const [boardTheme, setBoardTheme] = useState<BoardTheme>(BOARD_THEME);
+
   const pyodideRef = useRef<any>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +135,7 @@ export default function SecurityMazeGame() {
     {
       target: mazeRef,
       title: "The maze board",
-      body: "Red tiles are camera vision cones — step into one and you're caught. Grab all 3 items, then reach the green EXIT tile.",
+      body: "Red areas are where security is looking — step into one and you're caught. Grab all 3 items, then reach the EXIT.",
       placement: "left",
     },
     {
@@ -359,6 +364,7 @@ export default function SecurityMazeGame() {
 
   const visionCells = getCameraVisionCells();
   const collectedCount = items.filter(i => i.collected).length;
+  const ActiveBoard = BOARD_THEMES[boardTheme].Board;
 
   // ==========================================
   // RENDER COMPONENT UI
@@ -463,63 +469,39 @@ export default function SecurityMazeGame() {
 
           {/* Right Column: Maze Board & Status */}
           <div className="flex flex-col gap-3 lg:col-span-7">
-            <div className="flex items-center justify-between border border-line bg-panel-muted px-4 py-3 text-[11px] text-dim">
-              <span>MOVES: <b className="ml-1 text-[13px] text-accent-primary">{moves}</b></span>
-              <span>ITEMS: <b className="ml-1 text-[13px] text-accent-primary">{collectedCount}/{items.length}</b></span>
-            </div>
-
-            {/* Maze Grid Display */}
-            <div ref={mazeRef} className="overflow-x-auto border border-line bg-panel-deep p-3">
-              <div
-                className="grid min-w-[420px] gap-[3px]"
-                style={{ gridTemplateColumns: `repeat(${grid[0].length}, minmax(0, 1fr))` }}
-              >
-                {grid.map((row, y) =>
-                  row.map((cellType, x) => {
-                    const isPlayerHere = player.x === x && player.y === y;
-                    const cameraHere = cameras.find(c => c.x === x && c.y === y);
-                    const itemHere = items.find(i => !i.collected && i.x === x && i.y === y);
-                    const isVision = visionCells.has(`${x},${y}`);
-
-                    let cls = "border border-panel-elevated bg-panel"; // Wall
-                    let content: React.ReactNode = null;
-
-                    if (cellType === 1) cls = "bg-background"; // Open path
-                    if (isVision && cellType !== 0) cls = "bg-slate-red/20"; // Camera vision cone
-                    if (cellType === 2) {
-                      cls = "border border-accent-primary bg-accent-secondary text-accent-primary";
-                      content = "EXIT";
-                    }
-                    if (itemHere) {
-                      cls = "bg-slate-yellow text-accent-primary-foreground";
-                      content = "?";
-                    }
-                    if (cameraHere) {
-                      cls = "bg-slate-red text-accent-primary-foreground";
-                      content = CAMERA_ARROW[cameraHere.direction];
-                    }
-                    if (isPlayerHere) {
-                      cls = caught
-                        ? "bg-slate-red text-accent-primary-foreground ring-2 ring-slate-red/60"
-                        : "bg-accent-primary text-accent-primary-foreground shadow-[0_0_12px_rgba(113,246,208,0.55)]";
-                      content = "P";
-                    }
-
-                    return (
-                      <div
-                        key={`${x}-${y}`}
-                        className={`flex aspect-square items-center justify-center text-[9px] font-bold transition-colors sm:text-[10px] ${cls}`}
-                        title={cameraHere ? `camera facing ${cameraHere.direction.toLowerCase()}` : undefined}
-                      >
-                        {content}
-                      </div>
-                    );
-                  })
-                )}
+            {/* Optional theme picker — toggle SHOW_THEME_PICKER in boards/index.ts */}
+            {SHOW_THEME_PICKER && (
+              <div className="flex flex-wrap gap-2 text-xs">
+                {(Object.keys(BOARD_THEMES) as BoardTheme[]).map((id) => (
+                  <button
+                    key={id}
+                    onClick={() => setBoardTheme(id)}
+                    className={`border px-3 py-1.5 transition ${
+                      boardTheme === id
+                        ? "border-accent-primary bg-accent-primary text-accent-primary-foreground"
+                        : "border-line bg-panel-muted text-dim hover:text-accent-primary"
+                    }`}
+                  >
+                    [ {BOARD_THEMES[id].label.toLowerCase()} ]
+                  </button>
+                ))}
               </div>
-              <div className="mt-2 text-right text-[10px] text-faint">
-                grid:// sector_02 · x:{String(player.x).padStart(2, "0")} y:{String(player.y).padStart(2, "0")}
-              </div>
+            )}
+
+            {/* Maze Board — rendered by the theme selected in boards/index.ts */}
+            <div ref={mazeRef} className="w-full overflow-x-auto">
+              <ActiveBoard
+                grid={grid}
+                player={player}
+                items={items}
+                cameras={cameras}
+                visionCells={visionCells}
+                moves={moves}
+                collected={collectedCount}
+                total={items.length}
+                caught={caught}
+                won={won}
+              />
             </div>
 
             {/* Status Banners */}
@@ -578,8 +560,6 @@ export default function SecurityMazeGame() {
     </>
   );
 }
-
-const CAMERA_ARROW: Record<Direction, string> = { UP: "▲", DOWN: "▼", LEFT: "◀", RIGHT: "▶" };
 
 function logColor(log: string) {
   if (/alarm|error|failed/i.test(log)) return "text-slate-red";
