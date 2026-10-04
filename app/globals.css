@@ -1,32 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  /* Site Theme Palette:
-     - background: #0D1117
-     - panels / cards: #0D1117 (with subtle elevated tints / borders)
-     - primary-accents: #71F6D0
-     - secondary-accents: #163B36
+  /* Elevated Slate-Navy Dark Theme (Lighter background & distinct card surfaces)
+     - Background: #161b22 (soft charcoal slate rather than pitch black)
+     - Panels: #21262d (elevated card surface with clean contrast)
+     - Panel Muted: #1c2128
+     - Panel Elevated: #2d333b
+     - Primary Accent: #71F6D0 (vibrant mint cyan)
+     - Secondary Accent: #1c3d37 (softened pine teal)
   */
-  --background: #0D1117;
-  --foreground: #e6edf3;
+  --background: #161b22;
+  --foreground: #f0f6fc;
 
   /* Panels / Cards */
-  --panel: #0D1117;
-  --panel-muted: #111822;
-  --panel-elevated: #161f2e;
-  --panel-border: rgba(113, 246, 208, 0.14);
-  --panel-border-hover: rgba(113, 246, 208, 0.35);
+  --panel: #21262d;
+  --panel-muted: #1c2128;
+  --panel-elevated: #2d333b;
+  --panel-border: rgba(113, 246, 208, 0.18);
+  --panel-border-hover: rgba(113, 246, 208, 0.45);
 
   /* Accents */
   --accent-primary: #71F6D0;
-  --accent-primary-foreground: #0D1117;
-  --accent-secondary: #163B36;
+  --accent-primary-foreground: #0d1117;
+  --accent-secondary: #1c3d37;
   --accent-secondary-foreground: #71F6D0;
 
   /* Utility / Muted Tokens */
-  --muted: #161b22;
-  --muted-foreground: #8b949e;
-  --border: rgba(113, 246, 208, 0.12);
+  --muted: #272d37;
+  --muted-foreground: #9caab9;
+  --border: rgba(113, 246, 208, 0.15);
 }
 
 @theme inline {

@@ -44,12 +44,6 @@ export default function Navbar() {
             <span className="h-2 w-2 rounded-full bg-accent-primary animate-pulse" />
             SYSTEM ONLINE
           </div>
-          <Link
-            href="/game/1"
-            className="inline-flex items-center justify-center rounded-xl bg-accent-primary text-accent-primary-foreground font-semibold px-4 py-2 text-xs shadow-md shadow-accent-primary/20 hover:brightness-105 active:scale-95 transition"
-          >
-            Launch Game →
-          </Link>
         </div>
       </div>
     </header>
