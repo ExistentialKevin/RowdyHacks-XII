@@ -92,7 +92,7 @@ function getCameraCells(cam: Camera): Pos[] {
   const dx = cam.direction === "RIGHT" ? 1 : cam.direction === "LEFT" ? -1 : 0;
   const dy = cam.direction === "DOWN" ? 1 : cam.direction === "UP" ? -1 : 0;
   const cells: Pos[] = [];
-  for (let i = 1; i <= cam.range; i++) {
+  for (let i = 0; i < cam.range; i++) {
     const cx = cam.x + dx * i;
     const cy = cam.y + dy * i;
     if (!isOpen(cx, cy)) break;

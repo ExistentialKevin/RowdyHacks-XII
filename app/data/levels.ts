@@ -20,7 +20,7 @@ export const initialLevels: LevelData[] = [
     total: 5,
     difficulty: "Beginner",
     category: "Tutorial",
-    href: null,
+    href: "/levels/1",
   },
   {
     levelNumber: 2,
