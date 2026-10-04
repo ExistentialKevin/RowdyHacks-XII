@@ -8,9 +8,14 @@ const LINKS = [
   { href: "/levels/2", label: "play_maze", match: (p: string) => p.startsWith("/levels") },
 ];
 
-export default function Navbar() {
-  const pathname = usePathname() ?? "/";
+type NavKey = "operations" | "workspace";
 
+const ACTIVE_LINK =
+  "rounded-lg bg-panel-elevated border border-panel-border px-3.5 py-2 text-foreground font-semibold transition hover:border-accent-primary/30";
+const IDLE_LINK =
+  "rounded-lg px-3.5 py-2 hover:bg-panel-elevated hover:text-accent-primary transition";
+
+export default function Navbar({ active = "operations" }: { active?: NavKey }) {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-panel-muted/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -25,23 +30,27 @@ export default function Navbar() {
         </Link>
 
         {/* Nav links */}
-        <nav className="flex items-center gap-1 text-[11px] sm:text-[13px]">
-          {LINKS.map((l) => {
-            const active = l.match(pathname);
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={
-                  active
-                    ? "whitespace-nowrap bg-accent-primary px-2 py-1.5 font-medium text-accent-primary-foreground sm:px-3.5"
-                    : "whitespace-nowrap px-2 py-1.5 text-muted-foreground transition hover:text-accent-primary sm:px-3.5"
-                }
-              >
-                [ {l.label} ]
-              </Link>
-            );
-          })}
+        <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-muted-foreground">
+          <Link
+            href="/"
+            aria-current={active === "operations" ? "page" : undefined}
+            className={active === "operations" ? ACTIVE_LINK : IDLE_LINK}
+          >
+            Operations
+          </Link>
+          <Link
+            href="/game/1"
+            className="rounded-lg px-3.5 py-2 hover:bg-panel-elevated hover:text-accent-primary transition"
+          >
+            Play Maze
+          </Link>
+          <Link
+            href="/workspace"
+            aria-current={active === "workspace" ? "page" : undefined}
+            className={active === "workspace" ? ACTIVE_LINK : IDLE_LINK}
+          >
+            Workspace
+          </Link>
         </nav>
 
         {/* Status */}

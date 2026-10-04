@@ -71,10 +71,10 @@
   --font-mono: var(--font-terminal-mono);
 }
 
-/* In a layer so Tailwind border-color utilities can override it. */
+/* In a layer so Tailwind border-color utilities (border-accent-primary, etc.) can override it. */
 @layer base {
   * {
-    border-color: var(--line);
+    border-color: var(--border);
   }
 }
 
