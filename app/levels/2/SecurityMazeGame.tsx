@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import TutorialOverlay, { TutorialStep } from "../components/TutorialOverlay";
+
+const TUTORIAL_STORAGE_KEY = "tutorial-level2-seen";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -84,6 +87,58 @@ export default function SecurityMazeGame() {
 
   const pyodideRef = useRef<any>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+
+  // Tutorial spotlight targets
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const runButtonRef = useRef<HTMLButtonElement>(null);
+  const consoleRef = useRef<HTMLDivElement>(null);
+  const mazeRef = useRef<HTMLDivElement>(null);
+  const apiRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!localStorage.getItem(TUTORIAL_STORAGE_KEY)) {
+      setTutorialActive(true);
+    }
+  }, []);
+
+  const finishTutorial = useCallback(() => {
+    setTutorialActive(false);
+    localStorage.setItem(TUTORIAL_STORAGE_KEY, "1");
+  }, []);
+
+  const tutorialSteps: TutorialStep[] = [
+    {
+      target: editorRef,
+      title: "Write your navigation code",
+      body: "This is your Python editor. Call move(\"UP\"/\"DOWN\"/\"LEFT\"/\"RIGHT\") to plan a path through the maze before running it.",
+      placement: "right",
+    },
+    {
+      target: runButtonRef,
+      title: "Run your code",
+      body: "Once the Python runtime shows ready, click here to execute your script and watch the player move step by step.",
+      placement: "bottom",
+    },
+    {
+      target: consoleRef,
+      title: "Watch the console",
+      body: "Collisions, item pickups, and alarms are all logged here, along with anything your script prints.",
+      placement: "right",
+    },
+    {
+      target: mazeRef,
+      title: "The maze board",
+      body: "Red tiles are camera vision cones — step into one and you're caught. Grab all 3 items, then reach the green EXIT tile.",
+      placement: "left",
+    },
+    {
+      target: apiRef,
+      title: "Available APIs",
+      body: "This reference lists every function your Python code can call in this level, plus what it does.",
+      placement: "top",
+    },
+  ];
 
   // Append log helper
   const appendLog = useCallback((msg: string) => {
@@ -300,6 +355,7 @@ export default function SecurityMazeGame() {
   // RENDER COMPONENT UI
   // ==========================================
   return (
+    <>
       <div className="flex min-h-screen w-full flex-col bg-zinc-950 p-4 text-zinc-100 md:p-8">
         <header className="mb-6 flex flex-col justify-between gap-4 border-b border-zinc-800 pb-4 md:flex-row md:items-center">
           <div>
@@ -313,6 +369,7 @@ export default function SecurityMazeGame() {
                       {pyodideStatus === "error" && "🔴 Python Runtime Error"}
                     </span>
             <button
+                ref={runButtonRef}
                 onClick={runPythonCode}
                 disabled={pyodideStatus !== "ready" || running || won || caught}
                 className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-all hover:bg-emerald-500 disabled:opacity-50"
@@ -325,13 +382,20 @@ export default function SecurityMazeGame() {
             >
               Reset
             </button>
+            <button
+                onClick={() => setTutorialActive(true)}
+                className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-200 transition-all hover:bg-zinc-700 border border-zinc-700"
+                title="Replay tutorial"
+            >
+              ? Help
+            </button>
           </div>
         </header>
 
         <div className="grid flex-1 grid-gap-6 lg:grid-cols-12 gap-6">
           {/* Left Column: Code Editor & Console */}
           <div className="flex flex-col gap-4 lg:col-span-5">
-            <div className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl">
+            <div ref={editorRef} className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl">
               <label className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">Python Navigation Code</label>
               <textarea
                   value={code}
@@ -345,7 +409,7 @@ export default function SecurityMazeGame() {
               </div>
             </div>
 
-            <div className="flex flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl min-h-[160px]">
+            <div ref={consoleRef} className="flex flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 shadow-xl min-h-[160px]">
               <span className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">System Console / Logs</span>
               <div ref={logContainerRef} className="flex-1 overflow-y-auto font-mono text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-lg border border-zinc-800 max-h-[180px]">
                 {logs.length === 0 && <span className="text-zinc-600">No logs yet...</span>}
@@ -370,7 +434,7 @@ export default function SecurityMazeGame() {
             </div>
 
             {/* Maze Grid Display */}
-            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl overflow-x-auto">
+            <div ref={mazeRef} className="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl overflow-x-auto">
               <div
                   className="grid gap-1"
                   style={{ gridTemplateColumns: `repeat(${grid[0].length}, minmax(0, 1fr))` }}
@@ -464,6 +528,33 @@ export default function SecurityMazeGame() {
             </div>
           </div>
         </div>
+
+        {/* Available APIs Reference */}
+        <div ref={apiRef} className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-xl">
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-emerald-400">Available APIs</h2>
+          <p className="mb-4 text-xs text-zinc-500">Functions your Python code can call in this level.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+              <code className="text-sm font-mono font-semibold text-emerald-400">move(direction: str)</code>
+              <p className="mt-1 text-xs text-zinc-400">
+                Moves the player one tile. <code className="text-zinc-300">direction</code> is one of{" "}
+                <code className="text-zinc-300">"UP"</code>, <code className="text-zinc-300">"DOWN"</code>,{" "}
+                <code className="text-zinc-300">"LEFT"</code>, <code className="text-zinc-300">"RIGHT"</code>.
+                Blocked by walls, collects items automatically, and triggers the alarm if a camera sees the tile.
+              </p>
+            </div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+              <code className="text-sm font-mono font-semibold text-emerald-400">print(value)</code>
+              <p className="mt-1 text-xs text-zinc-400">
+                Standard Python <code className="text-zinc-300">print()</code>. Output is captured and shown in the
+                System Console after your script finishes running.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <TutorialOverlay steps={tutorialSteps} active={tutorialActive} onFinish={finishTutorial} />
+    </>
   );
 }
