@@ -1,40 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🕵️ Heist School
+
+**Built at RowdyHacks XII**
+
+Heist School is a browser game that teaches Python through heist-themed puzzles. It's meant for teachers who want a simple, self-contained place for students to learn real coding and professional skills, without fighting complicated tools.
+
+Students write **real Python** in an in-browser editor. The code runs entirely client-side through **Pyodide** (Python compiled to WebAssembly), so nothing needs to be installed and no backend runs code.
+
+## Levels
+| # | Mission | Concept |
+|---|---|---|
+| 1 | **The Casing** | Variables 101 (tutorial) |
+| 2 | **The Camera Gauntlet** | Dodge security cameras and collect diamonds using movement commands |
+| 3 | **The Inside Job** | Read an access code and store it in a variable |
+| 4 | **The Vault** | Crack the cipher (coming soon) |
+
+## Features
+- In-browser Python editor (CodeMirror) with live console output
+- Python runs locally via a self-hosted copy of Pyodide
+- Guided tutorial overlay and an animated talking mascot for hints
+- **Planning Room** workspace: a repo panel, editor, and ticket board that introduce students to git and ticket-based workflows (UI prototype)
+
+## Tech Stack
+Next.js · React · TypeScript · Tailwind CSS · Pyodide · CodeMirror
 
 ## Getting Started
-
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+Open [http://localhost:3000](http://localhost:3000).
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Team
+Built by [ExistentialKevin](https://github.com/ExistentialKevin), [Sa1vad0r](https://github.com/Sa1vad0r), [esteban-ai24](https://github.com/esteban-ai24), and [DnCrMn](https://github.com/DnCrMn).
 
 ## Credits
-
-- Lil guy's voice (`public/sounds/peep.mp3`): Sound Effect by [Nikin](https://pixabay.com/users/nikin-253338/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=171389) from [Pixabay](https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=171389)
+- Mascot voice (`public/sounds/peep.mp3`): Sound effect by [Nikin](https://pixabay.com/users/nikin-253338/) from [Pixabay](https://pixabay.com/)
